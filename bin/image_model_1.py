@@ -75,3 +75,4 @@ for layer in base_model.layers:
 model = Model(base_model.input, preds)
 model.compile(optimizer='Adam', loss='mean_squared_error')
 model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=32)
+
