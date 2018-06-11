@@ -13,11 +13,11 @@ from keras.layers.wrappers import TimeDistributed
 from keras.optimizers import Nadam
 
 # Open answers file
-with open('data/annotation_training.pkl', 'rb') as f:
+with open('../data/meta_data/annotation_training.pkl', 'rb') as f:
     annotation_training = pickle.load(f, encoding='latin1')
 
 # Get all IDs for videos for the training set
-vid_ids = os.listdir('imageData/trainingData')[0:10]
+vid_ids = os.listdir('../data/image_data/training_data')[0:10]
 y_train = [annotation_training['interview'][i + '.mp4'] for i in vid_ids]
 
 # Create empty array to store image data
@@ -25,12 +25,12 @@ X_train = np.empty(shape=(0, 100, 224, 224, 3))
 
 for video in vid_ids:
 
-    images = os.listdir('ImageData/trainingData/{}'.format(video))
+    images = os.listdir('../data/image_data/training_data/{}'.format(video))
     X_temp = np.empty(shape=(0, 224, 224, 3))
 
     for image in images:
         # Load the image
-        filename = 'ImageData/trainingData/{}/frame50.jpg'.format(video)
+        filename = '../data/image_data/training_data/{}/frame50.jpg'.format(video)
         original = load_img(filename, target_size=(224, 224))
 
         # Convert to numpy array
@@ -72,4 +72,3 @@ model.compile(loss="mean_squared_error",
 # Create the model
 model.compile(optimizer='Adam', loss='mean_squared_error')
 model.fit(X_train, y_train, epochs=10, batch_size=32)
-

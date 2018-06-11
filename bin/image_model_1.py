@@ -11,11 +11,11 @@ from keras.applications.vgg16 import preprocess_input
 from sklearn.metrics import mean_squared_error
 
 # Open answers file
-with open('data/annotation_training.pkl', 'rb') as f:
+with open('../data/meta_data/annotation_training.pkl', 'rb') as f:
     annotation_training = pickle.load(f, encoding='latin1')
 
 # Get all IDs for videos for the training set
-vid_ids = os.listdir('imageData/trainingData')[0:500]
+vid_ids = os.listdir('../data/image_data/training_data')[0:500]
 y_train = [annotation_training['interview'][i + '.mp4'] for i in vid_ids]
 
 # Create empty array to store image data
@@ -23,7 +23,7 @@ X_train = np.empty(shape=(0, 224, 224, 3))
 
 for video in vid_ids:
     # Load the image
-    filename = 'ImageData/trainingData/{}/frame50.jpg'.format(video)
+    filename = '../data/image_data/training_data/{}/frame50.jpg'.format(video)
     original = load_img(filename, target_size=(224, 224))
 
     # Convert to numpy array
@@ -35,11 +35,11 @@ for video in vid_ids:
     X_train = np.concatenate((X_train, image_temp), axis=0)
 
 # Open answers file
-with open('data/annotation_test.pkl', 'rb') as f:
+with open('../data/meta_data/annotation_test.pkl', 'rb') as f:
     annotation_test = pickle.load(f, encoding='latin1')
 
 # Get all IDs for videos for the test set
-vid_ids = os.listdir('imageData/testData')[0:200]
+vid_ids = os.listdir('../data/image_data/test_data')[0:200]
 y_test = [annotation_test['interview'][i + '.mp4'] for i in vid_ids]
 
 # Create empty array to store image data
@@ -47,7 +47,7 @@ X_test = np.empty(shape=(0, 224, 224, 3))
 
 for video in vid_ids:
     # Load the image
-    filename = 'ImageData/testData/{}/frame50.jpg'.format(video)
+    filename = '../data/image_data/test_data/{}/frame50.jpg'.format(video)
     original = load_img(filename, target_size=(224, 224))
 
     # Convert to numpy array

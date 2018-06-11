@@ -19,8 +19,8 @@ for chunk in file_chunks:
 
         # Create new folder for images
         try:
-            if not os.path.exists('image_data/{}_data/{}'.format(partition, file_name)):
-                os.makedirs('image_data/{}_data/{}'.format(partition, file_name))
+            if not os.path.exists('../data/image_data/{}_data/{}'.format(partition, file_name)):
+                os.makedirs('../data/image_data/{}_data/{}'.format(partition, file_name))
 
         except OSError:
             print('Error: Creating directory of data')
