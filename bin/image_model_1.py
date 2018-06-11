@@ -10,16 +10,20 @@ from keras.layers import Dense, Flatten
 from keras.applications.vgg16 import preprocess_input
 from sklearn.metrics import mean_squared_error
 
+train_samples = 500
+test_samples = 100
+
 # Open answers file
 with open('../data/meta_data/annotation_training.pkl', 'rb') as f:
     annotation_training = pickle.load(f, encoding='latin1')
 
 # Get all IDs for videos for the training set
-vid_ids = os.listdir('../data/image_data/training_data')[0:500]
+vid_ids = os.listdir('../data/image_data/training_data')[0:train_samples]
 y_train = [annotation_training['interview'][i + '.mp4'] for i in vid_ids]
 
 # Create empty array to store image data
-X_train = np.empty(shape=(0, 224, 224, 3))
+X_train = np.empty(shape=(train_samples, 224, 224, 3))
+counter = 0
 
 for video in vid_ids:
     # Load the image
@@ -32,18 +36,21 @@ for video in vid_ids:
     # Resize and store in one big array
     image_temp = np.expand_dims(numpy_image, axis=0)
     image_temp = vgg16.preprocess_input(image_temp)
-    X_train = np.concatenate((X_train, image_temp), axis=0)
+    X_train[counter] = image_temp
+
+    counter += 1
 
 # Open answers file
 with open('../data/meta_data/annotation_test.pkl', 'rb') as f:
     annotation_test = pickle.load(f, encoding='latin1')
 
 # Get all IDs for videos for the test set
-vid_ids = os.listdir('../data/image_data/test_data')[0:200]
+vid_ids = os.listdir('../data/image_data/test_data')[0:test_samples]
 y_test = [annotation_test['interview'][i + '.mp4'] for i in vid_ids]
 
 # Create empty array to store image data
-X_test = np.empty(shape=(0, 224, 224, 3))
+X_test = np.empty(shape=(test_samples, 224, 224, 3))
+counter = 0
 
 for video in vid_ids:
     # Load the image
@@ -56,7 +63,10 @@ for video in vid_ids:
     # Resize and store in one big array
     image_temp = np.expand_dims(numpy_image, axis=0)
     image_temp = vgg16.preprocess_input(image_temp)
-    X_test = np.concatenate((X_test, image_temp), axis=0)
+    X_test[counter] = image_temp
+
+    counter += 1
+
 
 # Load the VGG16 model
 base_model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape =(224,224,3))
