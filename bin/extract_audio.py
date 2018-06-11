@@ -1,7 +1,7 @@
 import moviepy.editor as mp
 import os
 
-partition = 'training'
+partition = 'validation'
 file_chunks = os.listdir('../data/video_data')
 file_chunks = [i for i in file_chunks if partition in i]
 
