@@ -1,15 +1,17 @@
+import pickle
 from keras.applications import vgg16
 from keras.models import Model
 from keras.layers import Dense, Flatten
+
 import lib
 
 # Transform images into numpy arrays
-X_train, y_train = lib.img2array(data_split='training', num_samples=500, frame_num=50)
-X_test, y_test = lib.img2array(data_split='test', num_samples=100, frame_num=50)
+X_train, y_train = lib.img2array(data_split='training', num_samples=6000, frame_num=10)
+X_test, y_test = lib.img2array(data_split='test', num_samples=2000, frame_num=10)
 
 
 # Load the VGG16 model
-base_model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape =(224,224,3))
+base_model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
 x = base_model.output
 
 # Create the last two additional layers
@@ -24,5 +26,10 @@ for layer in base_model.layers:
 # Create the model
 model = Model(base_model.input, preds)
 model.compile(optimizer='Adam', loss='mean_squared_error')
-model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=32)
+model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, batch_size=32)
+
+# Save model
+pkl_filename = '../output/image_model_1.pkl'
+with open(pkl_filename, 'wb') as file:
+    pickle.dump(model, file)
 
