@@ -9,7 +9,6 @@ import lib
 X_train, y_train = lib.img2array(data_split='training', num_samples=6000, frame_num=10)
 X_test, y_test = lib.img2array(data_split='test', num_samples=2000, frame_num=10)
 
-
 # Load the VGG16 model
 base_model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
 x = base_model.output
@@ -32,4 +31,3 @@ model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, batch_
 pkl_filename = '../output/image_model_1.pkl'
 with open(pkl_filename, 'wb') as file:
     pickle.dump(model, file)
-
