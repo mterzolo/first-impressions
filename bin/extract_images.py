@@ -44,15 +44,15 @@ for chunk in file_chunks:
             if frame is None:
                 continue
 
-            ## Resize to 256x256
+            # Resize image
             frame = cv2.resize(frame, (224, 224), interpolation=cv2.INTER_CUBIC)
 
             # Save image to jpg
-            name = 'image_data/{}_data/{}/frame{}.jpg'.format(partition, file_name, count)
+            name = '../data/image_data/{}_data/{}/frame{}.jpg'.format(partition, file_name, count)
             cv2.imwrite(name, frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
-        ## Print the file which is done
+        # Print the file which is done
         print(chunk, ':', file_name)
