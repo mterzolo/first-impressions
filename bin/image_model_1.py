@@ -1,4 +1,5 @@
 import pickle
+import keras
 from keras.applications import vgg16
 from keras.models import Model
 from keras.layers import Dense, Flatten
@@ -22,9 +23,12 @@ preds = Dense(1, activation='linear')(x)
 for layer in base_model.layers:
     layer.trainable = False
 
+# Optimizer
+optimizer = keras.optimizers.Adam(lr=0.001, decay=0.001)
+
 # Create the model
 model = Model(base_model.input, preds)
-model.compile(optimizer='Adam', loss='mean_squared_error')
+model.compile(optimizer=optimizer, loss='mean_squared_error')
 model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, batch_size=32)
 
 # Save model

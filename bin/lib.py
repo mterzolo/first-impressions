@@ -51,7 +51,7 @@ def img2array3D(data_split, num_samples, num_frames):
     y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
 
     # Create empty array to store image data
-    X = np.empty(shape=(num_samples, 100, 224, 224, 3))
+    X = np.empty(shape=(num_samples, num_frames, 224, 224, 3))
     out_counter = 0
 
     for video in vid_ids:
