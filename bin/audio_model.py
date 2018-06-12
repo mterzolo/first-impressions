@@ -1,15 +1,18 @@
+import pickle
 from keras.layers import Dense, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras.models import Sequential
 from keras.callbacks import ModelCheckpoint
 
-import lib
-
-X_train, y_train = lib.audio2melspec(data_split='training', num_samples=6000)
-X_test, y_test = lib.audio2melspec(data_split='test', num_samples=2000)
-
-X_train = X_train.reshape(X_train.shape[0], 128, 662, 1)
-X_test = X_test.reshape(X_test.shape[0], 128, 662, 1)
+# Load data
+with open('../data/audio_data/pickle_files/X_train.pkl', 'rb') as file:
+    X_train = pickle.load(file)
+with open('../data/audio_data/pickle_files/y_train.pkl', 'rb') as file:
+    y_train = pickle.load(file)
+with open('../data/audio_data/pickle_files/X_test.pkl', 'rb') as file:
+    X_test = pickle.load(file)
+with open('../data/audio_data/pickle_files/y_test.pkl', 'rb') as file:
+    y_test = pickle.load(file)
 
 input_shape = (128, 662, 1)
 
