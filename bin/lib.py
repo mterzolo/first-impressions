@@ -63,7 +63,7 @@ def img2array3D(data_split, num_samples, num_frames):
         for image in images:
 
             # Load the image
-            original = load_img('../data/image_data/{}_data/{}'.format(data_split, image), target_size=(224, 224))
+            original = load_img('../data/image_data/{}_data/{}/{}'.format(data_split, video, image), target_size=(224, 224))
 
             # Convert to numpy array
             numpy_image = img_to_array(original)
