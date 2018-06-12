@@ -1,6 +1,7 @@
 import os
 import pickle
 import librosa
+import cv2
 import numpy as np
 from keras.applications import vgg16
 from keras.preprocessing.image import load_img
@@ -104,6 +105,7 @@ def audio2melspec(data_split, num_samples):
 
         aud, sr = librosa.load('../data/audio_data/{}_data/{}.mp3'.format(data_split, audio))
         mel_spec = librosa.feature.melspectrogram(y=aud)
+        mel_spec = cv2.resize(mel_spec, dsize=(662, 128), interpolation=cv2.INTER_CUBIC)
         X[counter] = mel_spec
 
     return X, y
