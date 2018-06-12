@@ -3,6 +3,7 @@ import keras
 from keras.applications import vgg16
 from keras.models import Model
 from keras.layers import Dense, Flatten, Dropout
+from keras.callbacks import ModelCheckpoint
 
 import lib
 
@@ -17,9 +18,6 @@ x = base_model.output
 # Create additional layers
 x = Flatten()(x)
 x = Dense(1024, activation='relu')(x)
-x = Dense(512, activation='relu')(x)
-x = Dropout(.4)(x)
-x = Dense(512, activation='relu')(x)
 x = Dropout(.4)(x)
 x = Dense(256, activation='relu')(x)
 x = Dropout(.4)(x)
