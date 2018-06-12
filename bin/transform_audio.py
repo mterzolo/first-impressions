@@ -2,8 +2,8 @@ import lib
 import pickle
 
 
-X_train, y_train = lib.audio2melspec(data_split='training', num_samples=6000)
-X_test, y_test = lib.audio2melspec(data_split='test', num_samples=2000)
+X_train, y_train = lib.audio2melspec(data_split='training', num_samples=5)
+X_test, y_test = lib.audio2melspec(data_split='test', num_samples=5)
 
 X_train = X_train.reshape(X_train.shape[0], 128, 662, 1)
 X_test = X_test.reshape(X_test.shape[0], 128, 662, 1)
