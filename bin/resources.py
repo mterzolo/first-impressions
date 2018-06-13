@@ -6,6 +6,7 @@ import requests
 
 from lib import get_conf
 
+
 def download_first_impressions():
     """
     Download raw video and annotations data sets. Extracts the zipped folders and organizes them appropriately
@@ -49,7 +50,7 @@ def download_first_impressions():
                 'Downloading embedding data from: {} to: {}'.format(server + file, fi_downloaded_path))
 
             # Download the file
-            download_file(server + file, fi_downloaded_path)
+            download_file(server + file, fi_downloaded_path, auth=True)
 
         # Extract video files, if necessary
         if not os.path.exists(get_conf('first_impressions_path') + '/{}'.format(file.split('.zip')[0])):
@@ -98,7 +99,7 @@ def download_embedding():
         logging.info(
             'Downloading embedding data from: {} to: {}'.format(embedding_download_link, embedding_downloaded_path))
 
-        download_file(embedding_download_link, embedding_downloaded_path)
+        download_file(embedding_download_link, embedding_downloaded_path, auth=False)
 
     # Extract embeddings, if necessary
     if not os.path.exists(get_conf('embedding_path')):
@@ -106,23 +107,16 @@ def download_embedding():
         logging.info(
             'Extracting embedding data from: {} to: {}'.format(embedding_downloaded_path,get_conf('embedding_path')))
 
-        with gzip.open(embedding_downloaded_path, 'rb') as zipped, \
-                open(get_conf('embedding_path'), 'w+') as unzipped:
-            for line in zipped:
-                unzipped.write(line)
+    with gzip.open(embedding_downloaded_path, 'rb') as zipped, \
+            open(get_conf('embedding_path'), 'wb') as unzipped:
+        for line in zipped:
+            unzipped.write(line)
 
-        zipped = gzip.GzipFile(embedding_downloaded_path, 'rb')
-        s = zipped.read()
-        zipped.close()
-
-        unzipped = file(get_conf('embedding_path'), 'w+')
-        unzipped.write(s)
-        unzipped.close()
 
     logging.info('Embeddings available at: {}'.format(get_conf('embedding_path')))
 
 
-def download_file(url, local_file_path):
+def download_file(url, local_file_path, auth=False):
     """
     Download the file at `url` in chunks, to the location at `local_file_path`
     :param url: URL to a file to be downloaded
@@ -140,25 +134,30 @@ def download_file(url, local_file_path):
     # Reference variables
     chunk_count = 0
 
-    # Create connection to the stream
-    r = requests.get(url, auth=(username,password), stream=True)
+    if auth == True:
+
+        # Create connection to the stream
+        r = requests.get(url, auth=(username,password), stream=True)
+    else:
+
+        # Create connection without password
+        r = requests.get(url, stream=True)
 
     # Open output file
     with open(local_file_path, 'wb') as f:
 
         # Iterate through chunks of file
-        for chunk in r.iter_content(chunk_size=1048576):
+        for chunk in r.iter_content(chunk_size=64*1024):
 
             logging.debug('Downloading chunk: {} for file: {}'.format(chunk_count, local_file_path))
 
-            # If there is a chunk to write to file, write it
-            if chunk:
-                f.write(chunk)
+            # Write chunk to file
+            f.write(chunk)
 
             # Increase chunk counter
             chunk_count = chunk_count + 1
 
-    r.close()
+    #r.close()
     return local_file_path
 
 

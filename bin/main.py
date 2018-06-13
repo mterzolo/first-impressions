@@ -8,11 +8,13 @@ import resources
 
 def main():
 
-    logging.getLogger().setLevel(level=logging.INFO)
+    logging.getLogger().setLevel(level=logging.DEBUG)
 
     # Extract resources
     #resources.download_first_impressions()
     resources.download_embedding()
+
+    #embedding_matrix, word_to_index = resources.create_embedding_matrix()
 
     pass
 
