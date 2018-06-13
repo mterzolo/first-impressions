@@ -1,0 +1,8 @@
+first_impressions_path: ../resources/first-impressions
+embedding_path: ../resources/GoogleNews-vectors-negative300.bin
+test_run: False
+data_schema_dir: ../data/schemas
+train_model: True
+max_sequence_length: 1000
+user_name: mterzolo
+password: metis2018
