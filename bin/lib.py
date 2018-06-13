@@ -178,3 +178,84 @@ def audio2melspec(data_split, num_samples):
 
     return X, y
 
+def extract_images(partition, num_frames):
+
+    logging.info('Begin image extraction on {} partition'.format(partition))
+
+    file_chunks = os.listdir('../data/video_data')
+    file_chunks = [i for i in file_chunks if partition in i]
+
+    for chunk in file_chunks:
+
+        files = os.listdir('../data/video_data/{}'.format(chunk))
+
+        for file_name in files:
+
+            # Create video object
+            cap = cv2.VideoCapture('../data/video_data/{}/{}'.format(chunk, file_name))
+
+            # Get file name
+            file_name = (file_name.split('.mp4'))[0]
+
+            # Create new folder for images
+            try:
+                if not os.path.exists('../data/image_data/{}_data/{}'.format(partition, file_name)):
+                    os.makedirs('../data/image_data/{}_data/{}'.format(partition, file_name))
+
+            except OSError:
+                logging.warn('Error: Creating directory of data')
+
+            # Set number of frames to grab
+            cap.set(cv2.CAP_PROP_FRAME_COUNT, num_frames + 1)
+            length = num_frames + 1
+            count = 0
+
+            while (cap.isOpened()):
+                count += 1
+
+                # Exit if at the end
+                if length == count:
+                    break
+
+                # create the image
+                ret, frame = cap.read()
+
+                # Skip if there is no frame
+                if frame is None:
+                    continue
+
+                # Resize image
+                frame = cv2.resize(frame, (224, 224), interpolation=cv2.INTER_CUBIC)
+
+                # Save image to jpg
+                name = '../data/image_data/{}_data/{}/frame{}.jpg'.format(partition, file_name, count)
+                cv2.imwrite(name, frame)
+
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+                logging.info(chunk + ':' + file_name)
+
+def extract_audio(partition):
+
+
+    logging.info('Begin Audio Extraction on {} partition'.format(partition))
+
+    file_chunks = os.listdir('../data/video_data')
+    file_chunks = [i for i in file_chunks if partition in i]
+
+    # Create new folder for images
+    if not os.path.exists('../data/audio_data/{}_data/'.format(partition)):
+        os.makedirs('../data/audio_data/{}_data/'.format(partition))
+
+    for chunk in file_chunks:
+
+        files = os.listdir('../data/video_data/{}'.format(chunk))
+
+        for file_name in files:
+            file_name = file_name.split('.mp4')[0]
+
+            # Create video object
+            clip = mp.VideoFileClip('../data/video_data/{}/{}.mp4'.format(chunk, file_name))
+            clip.audio.write_audiofile("../data/audio_data/{}_data/{}.mp3".format(partition, file_name))
+
