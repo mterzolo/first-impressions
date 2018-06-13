@@ -1,4 +1,5 @@
 import gzip
+from zipfile import ZipFile
 import logging
 import os
 import gensim
@@ -17,26 +18,28 @@ def download_first_impressions():
 
     server = 'http://158.109.8.102/FirstImpressionsV2/'
 
-    download_links = ['train-transcription.zip',
-                      'train-annotation.zip',
-                      'test-transcription-e.zip',
-                      'test-annotation-e.zip',
-                      'val-annotation-e.zip',
-                      'val-transcription.zip',
-                      'train-1.zip',
-                      'train-2.zip',
-                      'train-3.zip',
-                      'train-4.zip',
-                      'train-5.zip',
-                      'train-6.zip',
-                      'test-1e.zip',
-                      'test-2e.zip',
-                      'val-1.zip',
-                      'val-2.zip',
-                      ]
+    download_links = [
 
-    test_encryption_key = '.chalearnLAPFirstImpressionsSECONDRoundICPRWorkshop2016.'
-    val_encryption_key = 'zeAzLQN7DnSIexQukc9W'
+        'train-transcription.zip',
+        'train-annotation.zip',
+        'test-transcription-e.zip',
+        'test-annotation-e.zip',
+        'val-annotation-e.zip',
+        'val-transcription.zip',
+        'train-1.zip',
+        'train-2.zip',
+        'train-3.zip',
+        'train-4.zip',
+        'train-5.zip',
+        'train-6.zip',
+        'test-1e.zip',
+        'test-2e.zip',
+        'val-1.zip',
+        'val-2.zip',
+    ]
+
+    encryption_key = 'zeAzLQN7DnSIexQukc9W'
+    alt_encryption_key = '.chalearnLAPFirstImpressionsSECONDRoundICPRWorkshop2016.'
 
     for file in download_links:
 
@@ -45,7 +48,7 @@ def download_first_impressions():
 
         # Download embeddings, if necessary
         if not os.path.exists(fi_downloaded_path):
-            logging.warn('{} does not exist. Downloading {}.'.format(file, file))
+            logging.warning('{} does not exist. Downloading {}.'.format(file, file))
             logging.info(
                 'Downloading embedding data from: {} to: {}'.format(server + file, fi_downloaded_path))
 
@@ -54,24 +57,35 @@ def download_first_impressions():
 
         # Extract video files, if necessary
         if not os.path.exists(get_conf('first_impressions_path') + '/{}'.format(file.split('.zip')[0])):
-            logging.warn('{} does not exist. Extracting {}.')
-            logging.info('Extracting {} data from: {} to: {}'.format(file,
-                                                                     fi_downloaded_path,
+            logging.warning('{} does not exist. Extracting {}.'.format(file, file))
+            logging.info('Extracting {} data from: {} to: {}'.format(file, fi_downloaded_path,
                                                                      get_conf('first_impressions_path')))
 
             # Define password for encrypted files
-            if file.split('-')[0] == 'test':
-                auth = test_encryption_key
-            elif file.split('-')[0] == 'val':
-                auth = val_encryption_key
+            if file in ['test-1e.zip', 'test-2e.zip']:
+                auth = alt_encryption_key
             else:
-                auth = None
+                auth = encryption_key
 
-            # Unzip files
-            with gzip.open(fi_downloaded_path, 'rb') as zipped, \
-                    open(get_conf('embedding_path'), 'w+') as unzipped:
-                for line in zipped:
-                    unzipped.write(line)
+            # Extract all zipped files
+            if 'transcription' in file or 'annotation' in file:
+                with ZipFile(fi_downloaded_path) as zf:
+                    zf.extractall(path='../data/meta_data', pwd=bytes(auth, 'utf-8'))
+
+            # Put video files in the video_data directory
+            else:
+                with ZipFile(fi_downloaded_path) as zf:
+                    zf.extractall(path='../data/video_data', pwd=bytes(auth, 'utf-8'))
+
+        # Extract all the file chunks in the video_data directory
+        to_extract = [i for i in os.listdir('../data/video_data') if '.zip' in i]
+
+    for file_chunk in to_extract:
+
+        with ZipFile('../data/video_data/{}'.format(file_chunk)) as zf:
+            zf.extractall(path='../data/video_data', pwd=bytes(auth, 'utf-8'))
+
+
 
         logging.info('{} available at: {}'.format(file.split('.zip')[0], get_conf('first_impressions_path')))
 
@@ -95,7 +109,7 @@ def download_embedding():
 
     # Download embeddings, if necessary
     if not os.path.exists(embedding_downloaded_path):
-        logging.warn('embedding_downloaded_path does not exist. Downloading embedding.')
+        logging.warning('embedding_downloaded_path does not exist. Downloading embedding.')
         logging.info(
             'Downloading embedding data from: {} to: {}'.format(embedding_download_link, embedding_downloaded_path))
 
@@ -103,15 +117,14 @@ def download_embedding():
 
     # Extract embeddings, if necessary
     if not os.path.exists(get_conf('embedding_path')):
-        logging.warn('embedding_path does not exist. Extracting embedding.')
+        logging.warning('embedding_path does not exist. Extracting embedding.')
         logging.info(
-            'Extracting embedding data from: {} to: {}'.format(embedding_downloaded_path,get_conf('embedding_path')))
+            'Extracting embedding data from: {} to: {}'.format(embedding_downloaded_path, get_conf('embedding_path')))
 
     with gzip.open(embedding_downloaded_path, 'rb') as zipped, \
             open(get_conf('embedding_path'), 'wb') as unzipped:
         for line in zipped:
             unzipped.write(line)
-
 
     logging.info('Embeddings available at: {}'.format(get_conf('embedding_path')))
 
@@ -123,6 +136,8 @@ def download_file(url, local_file_path, auth=False):
     :type url: str
     :param local_file_path: Path to download the file to
     :type local_file_path: str
+    :param auth: is authentication required to download file
+    :type auth: Boolean
     :return: The path to the file on the local machine (same as input `local_file_path`)
     :rtype: str
     """
@@ -134,10 +149,10 @@ def download_file(url, local_file_path, auth=False):
     # Reference variables
     chunk_count = 0
 
-    if auth == True:
+    if auth:
 
         # Create connection to the stream
-        r = requests.get(url, auth=(username,password), stream=True)
+        r = requests.get(url, auth=(username, password), stream=True)
     else:
 
         # Create connection without password
@@ -157,7 +172,6 @@ def download_file(url, local_file_path, auth=False):
             # Increase chunk counter
             chunk_count = chunk_count + 1
 
-    #r.close()
     return local_file_path
 
 
