@@ -1,58 +1,61 @@
 import cv2
 import os
 
-partition = 'test'
-file_chunks = os.listdir('../data/video_data')
-file_chunks = [i for i in file_chunks if partition in i]
+partitions = ['training', 'test', 'validation']
 
-for chunk in file_chunks:
+for partition in partitions:
 
-    files = os.listdir('../data/video_data/{}'.format(chunk))
+    file_chunks = os.listdir('../data/video_data')
+    file_chunks = [i for i in file_chunks if partition in i]
 
-    for file_name in files:
+    for chunk in file_chunks:
 
-        # Create video object
-        cap = cv2.VideoCapture('../data/video_data/{}/{}'.format(chunk, file_name))
+        files = os.listdir('../data/video_data/{}'.format(chunk))
 
-        # Get file name
-        file_name = (file_name.split('.mp4'))[0]
+        for file_name in files:
 
-        # Create new folder for images
-        try:
-            if not os.path.exists('../data/image_data/{}_data/{}'.format(partition, file_name)):
-                os.makedirs('../data/image_data/{}_data/{}'.format(partition, file_name))
+            # Create video object
+            cap = cv2.VideoCapture('../data/video_data/{}/{}'.format(chunk, file_name))
 
-        except OSError:
-            print('Error: Creating directory of data')
+            # Get file name
+            file_name = (file_name.split('.mp4'))[0]
 
-        # Set number of frames to grab
-        cap.set(cv2.CAP_PROP_FRAME_COUNT, 101)
-        length = 101
-        count = 0
+            # Create new folder for images
+            try:
+                if not os.path.exists('../data/image_data/{}_data/{}'.format(partition, file_name)):
+                    os.makedirs('../data/image_data/{}_data/{}'.format(partition, file_name))
 
-        while (cap.isOpened()):
-            count += 1
+            except OSError:
+                print('Error: Creating directory of data')
 
-            # Exit if at the end
-            if length == count:
-                break
+            # Set number of frames to grab
+            cap.set(cv2.CAP_PROP_FRAME_COUNT, 101)
+            length = 101
+            count = 0
 
-            # create the image
-            ret, frame = cap.read()
+            while (cap.isOpened()):
+                count += 1
 
-            # Skip if there is no frame
-            if frame is None:
-                continue
+                # Exit if at the end
+                if length == count:
+                    break
 
-            # Resize image
-            frame = cv2.resize(frame, (224, 224), interpolation=cv2.INTER_CUBIC)
+                # create the image
+                ret, frame = cap.read()
 
-            # Save image to jpg
-            name = '../data/image_data/{}_data/{}/frame{}.jpg'.format(partition, file_name, count)
-            cv2.imwrite(name, frame)
+                # Skip if there is no frame
+                if frame is None:
+                    continue
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+                # Resize image
+                frame = cv2.resize(frame, (224, 224), interpolation=cv2.INTER_CUBIC)
 
-        # Print the file which is done
-        print(chunk, ':', file_name)
+                # Save image to jpg
+                name = '../data/image_data/{}_data/{}/frame{}.jpg'.format(partition, file_name, count)
+                cv2.imwrite(name, frame)
+
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+            # Print the file which is done
+            print(chunk, ':', file_name)

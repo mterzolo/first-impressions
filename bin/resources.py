@@ -8,7 +8,7 @@ from lib import get_conf
 
 def download_first_impressions():
     """
-
+    Download raw video and annotations data sets. Extracts the zipped folders and organizes them appropriately
     :return:
     """
 
@@ -37,17 +37,42 @@ def download_first_impressions():
     test_encryption_key = '.chalearnLAPFirstImpressionsSECONDRoundICPRWorkshop2016.'
     val_encryption_key = 'zeAzLQN7DnSIexQukc9W'
 
-    for link in download_links:
+    for file in download_links:
 
-        fi_downloaded_path = '../resources/compressed/{}'.format(link)
+        # Define path to compressed files
+        fi_downloaded_path = '../resources/compressed/{}'.format(file)
 
         # Download embeddings, if necessary
         if not os.path.exists(fi_downloaded_path):
-            logging.warn('embedding_downloaded_path does not exist. Downloading embedding.')
+            logging.warn('{} does not exist. Downloading {}.'.format(file, file))
             logging.info(
-                'Downloading embedding data from: {} to: {}'.format(server + link, fi_downloaded_path))
+                'Downloading embedding data from: {} to: {}'.format(server + file, fi_downloaded_path))
 
-            download_file(server + link, fi_downloaded_path)
+            # Download the file
+            download_file(server + file, fi_downloaded_path)
+
+        # Extract video files, if necessary
+        if not os.path.exists(get_conf('first_impressions_path') + '/{}'.format(file.split('.zip')[0])):
+            logging.warn('{} does not exist. Extracting {}.')
+            logging.info('Extracting {} data from: {} to: {}'.format(file,
+                                                                     fi_downloaded_path,
+                                                                     get_conf('first_impressions_path')))
+
+            # Define password for encrypted files
+            if file.split('-')[0] == 'test':
+                auth = test_encryption_key
+            elif file.split('-')[0] == 'val':
+                auth = val_encryption_key
+            else:
+                auth = None
+
+            # Unzip files
+            with gzip.open(fi_downloaded_path, 'rb') as zipped, \
+                    open(get_conf('embedding_path'), 'w+') as unzipped:
+                for line in zipped:
+                    unzipped.write(line)
+
+        logging.info('{} available at: {}'.format(file.split('.zip')[0], get_conf('first_impressions_path')))
 
 
 def download_embedding():
@@ -65,7 +90,7 @@ def download_embedding():
 
     # Reference variables
     embedding_download_link = 'https://s3.amazonaws.com/dl4j-distribution/GoogleNews-vectors-negative300.bin.gz'
-    embedding_downloaded_path = '../data/text_data/compressed/GoogleNews-vectors-negative300.bin.gz'
+    embedding_downloaded_path = '../resources/compressed/GoogleNews-vectors-negative300.bin.gz'
 
     # Download embeddings, if necessary
     if not os.path.exists(embedding_downloaded_path):
@@ -85,6 +110,14 @@ def download_embedding():
                 open(get_conf('embedding_path'), 'w+') as unzipped:
             for line in zipped:
                 unzipped.write(line)
+
+        zipped = gzip.GzipFile(embedding_downloaded_path, 'rb')
+        s = zipped.read()
+        zipped.close()
+
+        unzipped = file(get_conf('embedding_path'), 'w+')
+        unzipped.write(s)
+        unzipped.close()
 
     logging.info('Embeddings available at: {}'.format(get_conf('embedding_path')))
 
