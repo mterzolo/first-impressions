@@ -44,11 +44,14 @@ def extract():
         # Take text from transcripts
         lib.extract_text()
 
+    pass
+
 
 def transform():
 
     #embedding_matrix, word_to_index = resources.create_embedding_matrix()
 
+    pass
 
 # Main section
 if __name__ == '__main__':
