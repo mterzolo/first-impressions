@@ -17,7 +17,7 @@ def main():
     logging.getLogger().setLevel(level=logging.DEBUG)
 
     extract()
-    #transform()
+    transform()
 
     pass
 
