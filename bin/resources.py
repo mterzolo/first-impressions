@@ -1,9 +1,10 @@
 import gzip
-from zipfile import ZipFile
 import logging
 import os
 import gensim
 import requests
+import pickle
+import subprocess
 
 from lib import get_conf
 
@@ -16,16 +17,33 @@ def download_first_impressions():
 
     logging.info('Attempting to either validate or download first impressions data set.')
 
+    # Set location of the server to download files from
     server = 'http://158.109.8.102/FirstImpressionsV2/'
 
+    # Download dictionaries that map relationships between downloaded files
+    with open('../resources/file_tree.pkl', 'rb') as input_file:
+        file_tree = pickle.load(input_file)
+    with open('../resources/meta_tree.pkl', 'rb') as input_file:
+        meta_tree = pickle.load(input_file)
+
+    # Set the encryption keys to unzip password protected files
+    encryption_key = 'zeAzLQN7DnSIexQukc9W'
+    alt_encryption_key = '.chalearnLAPFirstImpressionsSECONDRoundICPRWorkshop2016.'
+
+    # Check if the meta files are in the correct location
+    for file in meta_tree.keys():
+        if not os.path.exists('../data/meta_data/{}'.format(file)):
+
+            # Extract and save to correct location
+            subprocess.call(['unzip',
+                             '-n',
+                             '-P',
+                             encryption_key,
+                             '../resources/compressed/{}'.format(meta_tree[file]),
+                             '-d',
+                             '../data/meta_data/'])
     download_links = [
 
-        'train-transcription.zip',
-        'train-annotation.zip',
-        'test-transcription-e.zip',
-        'test-annotation-e.zip',
-        'val-annotation-e.zip',
-        'val-transcription.zip',
         'train-1.zip',
         'train-2.zip',
         'train-3.zip',
@@ -37,9 +55,6 @@ def download_first_impressions():
         'val-1.zip',
         'val-2.zip',
     ]
-
-    encryption_key = 'zeAzLQN7DnSIexQukc9W'
-    alt_encryption_key = '.chalearnLAPFirstImpressionsSECONDRoundICPRWorkshop2016.'
 
     for file in download_links:
 
@@ -55,40 +70,51 @@ def download_first_impressions():
             # Download the file
             download_file(server + file, fi_downloaded_path, auth=True)
 
-        # Extract video files, if necessary
-        if not os.path.exists(get_conf('first_impressions_path') + '/{}'.format(file.split('.zip')[0])):
-            logging.warning('{} does not exist. Extracting {}.'.format(file, file))
-            logging.info('Extracting {} data from: {} to: {}'.format(file, fi_downloaded_path,
-                                                                     get_conf('first_impressions_path')))
+    for file_chunk in file_tree.keys():
 
-            # Define password for encrypted files
-            if file in ['test-1e.zip', 'test-2e.zip']:
+        if not os.path.exists('../data/video_data/{}'.format(file_chunk)):
+
+            auth = encryption_key
+
+            logging.debug('Extracting {}'.format(file_tree[file_chunk]))
+
+            # Unzip file chunks from main download blocks
+            subprocess.call(['unzip',
+                             '-n',
+                             '-P',
+                             encryption_key,
+                             '../resources/compressed/{}'.format(file_tree[file_chunk]),
+                             '-d',
+                             '../data/video_data/'])
+
+            # Handle funky zipping of the test sets
+            if file_tree[file_chunk] == 'test-1e.zip':
+                all_files = os.listdir('../data/video_data/test-1/')
+                for file in all_files:
+                    subprocess.call(['mv', '../data/video_data/test-1/{}'.format(file), '../data/video_data/'])
+                subprocess.call(['rm', '-r', '../data/video_data/test-1/'])
                 auth = alt_encryption_key
-            else:
-                auth = encryption_key
 
-            # Extract all zipped files
-            if 'transcription' in file or 'annotation' in file:
-                with ZipFile(fi_downloaded_path) as zf:
-                    zf.extractall(path='../data/meta_data', pwd=bytes(auth, 'utf-8'))
+            elif file_tree[file_chunk] == 'test-2e.zip':
+                all_files = os.listdir('../data/video_data/test-2/')
+                for file in all_files:
+                    subprocess.call(['mv', '../data/video_data/test-2/{}'.format(file), '../data/video_data/'])
+                subprocess.call(['rm', '-r', '../data/video_data/test-2/'])
+                auth = alt_encryption_key
 
-            # Put video files in the video_data directory
-            else:
-                with ZipFile(fi_downloaded_path) as zf:
-                    zf.extractall(path='../data/video_data', pwd=bytes(auth, 'utf-8'))
+            # Unzip contents into newly created directory
+            zipped_chunks = [i for i in os.listdir('../data/video_data/') if '.zip' in i]
+            for to_extract in zipped_chunks:
+                subprocess.call(['unzip',
+                                 '-P',
+                                 auth,
+                                 '../data/video_data/{}'.format(to_extract),
+                                 '-d',
+                                 '../data/video_data/{}/'.format(to_extract.split('.zip')[0])])
+            for to_extract in zipped_chunks:
 
-        # Extract all the file chunks in the video_data directory
-        to_extract = [i for i in os.listdir('../data/video_data') if '.zip' in i]
-
-    for file_chunk in to_extract:
-
-        with ZipFile('../data/video_data/{}'.format(file_chunk)) as zf:
-            zf.extractall(path='../data/video_data', pwd=bytes(auth, 'utf-8'))
-
-
-
-        logging.info('{} available at: {}'.format(file.split('.zip')[0], get_conf('first_impressions_path')))
-
+                # Remove empty folder that is created in the process
+                subprocess.call(['rm', '../data/video_data/{}'.format(to_extract)])
 
 def download_embedding():
     """

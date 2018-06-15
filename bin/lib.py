@@ -178,6 +178,7 @@ def audio2melspec(data_split, num_samples):
 
     return X, y
 
+
 def extract_images(partition, num_frames):
 
     logging.info('Begin image extraction on {} partition'.format(partition))
@@ -203,7 +204,7 @@ def extract_images(partition, num_frames):
                     os.makedirs('../data/image_data/{}_data/{}'.format(partition, file_name))
 
             except OSError:
-                logging.warn('Error: Creating directory of data')
+                logging.warning('Error: Creating directory of data')
 
             # Set number of frames to grab
             cap.set(cv2.CAP_PROP_FRAME_COUNT, num_frames + 1)
@@ -217,7 +218,7 @@ def extract_images(partition, num_frames):
                 if length == count:
                     break
 
-                # create the image
+                # Create the image
                 ret, frame = cap.read()
 
                 # Skip if there is no frame
@@ -234,7 +235,8 @@ def extract_images(partition, num_frames):
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
-                logging.info(chunk + ':' + file_name)
+                logging.info('{}: {}: frame{}'.format(chunk, file_name, count))
+
 
 def extract_audio(partition):
 

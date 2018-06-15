@@ -18,8 +18,6 @@ def main():
 
     extract()
     transform()
-    model()
-    load()
 
     pass
 
@@ -37,7 +35,7 @@ def extract():
     # Extract images, audio files, and text transcripts for each partition
     for partition in ['training', 'test', 'validation']:
 
-        lib.extract_images(partition, num_frames=50)
+        lib.extract_images(partition, num_frames=20)
         lib.extract_audio(partition)
         lib.extract_text()
 
