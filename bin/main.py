@@ -35,17 +35,22 @@ def extract():
     # Extract images, audio files, and text transcripts for each partition
     for partition in ['training', 'test', 'validation']:
 
+        # Chop video up into images and save into seperate directory
         lib.extract_images(partition, num_frames=20)
+
+        # Strip audio from mp4 and save in seperate directory
         lib.extract_audio(partition)
+
+        # Take text from transcripts
         lib.extract_text()
 
 
 def transform():
 
-    embedding_matrix, word_to_index = resources.create_embedding_matrix()
+    #embedding_matrix, word_to_index = resources.create_embedding_matrix()
 
 
-def model():
+
 
 
 

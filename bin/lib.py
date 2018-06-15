@@ -9,9 +9,8 @@ from keras.preprocessing.image import img_to_array
 import datetime
 import logging
 import os
-
-import numpy
-import pandas
+import moviepy.editor as mp
+import pandas as pd
 import yaml
 from keras.preprocessing.sequence import pad_sequences
 
@@ -240,7 +239,6 @@ def extract_images(partition, num_frames):
 
 def extract_audio(partition):
 
-
     logging.info('Begin Audio Extraction on {} partition'.format(partition))
 
     file_chunks = os.listdir('../data/video_data')
@@ -261,3 +259,23 @@ def extract_audio(partition):
             clip = mp.VideoFileClip('../data/video_data/{}/{}.mp4'.format(chunk, file_name))
             clip.audio.write_audiofile("../data/audio_data/{}_data/{}.mp3".format(partition, file_name))
 
+def extract_text(partition):
+    """
+
+    Takes transcripts and saves them as dataframes
+    :param partition: Training set, test set, or validation set
+    :return:
+    """
+
+    logging.info('Begin Text Extraction')
+
+    # Open transcript
+    with open('../data/meta_data/transcription_{}.pkl'.format(partition), 'rb') as f:
+        transcript = pickle.load(f, encoding='latin1')
+
+    # Transform into a dataframe
+    pd.DataFrame({'file': list(transcript.keys()),
+                  'transcript': list(transcript.values())})
+
+    # Save into text data directory
+    pd.to_csv('../data/text_data/{}_data.csv'.format(partition), index=False)
