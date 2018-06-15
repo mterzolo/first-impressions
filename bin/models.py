@@ -2,7 +2,7 @@ import logging
 
 import keras
 from keras.engine import Model
-from keras.layers import Dense, Embedding, Conv1D, MaxPooling1D, Flatten
+from keras.layers import Dense, Embedding, Conv1D, Conv2D, MaxPooling1D, Flatten
 
 
 
@@ -30,14 +30,9 @@ def text_conv_model(transcripts, embedding_matrix, word_to_index):
     # Maximum length of the x vectors
     embedding_input_length = max(transcripts['padded_indices'].apply(len))
 
-    # Number of output labels
-    output_shape = max(transcripts['category_encoded'].apply(len))
-
     logging.info('embedding_input_dim: {}, embedding_output_dim: {}, embedding_input_length: {}, '
                  'output_shape: {}'.format(embedding_input_dim, embedding_output_dim, embedding_input_length,
                                            output_shape))
-
-    # Create architecture
 
     # Create embedding layer
     embedding_layer = Embedding(input_dim=embedding_input_dim,
@@ -60,9 +55,31 @@ def text_conv_model(transcripts, embedding_matrix, word_to_index):
     preds = Dense(units=1, activation='linear')(x)
 
     # Compile architecture
-    classification_model = Model(sequence_input, preds)
-    classification_model.compile(loss='mse',
-                                 optimizer='rmsprop',
-                                 metrics=['acc'])
+    text_model = Model(sequence_input, preds)
+    text_model.compile(loss='mse', optimizer='rmsprop')
 
     return text_model
+
+def audio_cnn_model():
+    """
+    Generate convulutional nerual network for audio data
+    :return:
+    """
+
+    input_shape = (128, 662, 1)
+
+    model = Sequential()
+    model.add(Conv2D(32, kernel_size=(5, 5), strides=(1, 1),
+                     activation='relu',
+                     input_shape=input_shape))
+    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+    model.add(Conv2D(64, (5, 5), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+    model.add(Flatten())
+    model.add(Dense(1024, activation='relu'))
+    model.add(Dense(1, activation='linear'))
+
+    # fit model
+    filename = '../output/audio_model.h5'
+    checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+    model.compile(optimizer='Adam', loss='mean_squared_error')

@@ -41,7 +41,7 @@ def load_confs(confs_path='../conf/confs.yaml'):
             CONFS = yaml.load(open(confs_path))
 
         except IOError:
-            logging.warn('Unable to open user conf file. Attempting to run with default values from confs template')
+            logging.warning('Unable to open user conf file. Attempting to run with default values from confs template')
 
             # Attempt to load confs from template path
             template_path = confs_path + '.template'
@@ -58,6 +58,7 @@ def get_conf(conf_name):
     :return: Value for that conf (no specific type information available)
     """
     return load_confs()[conf_name]
+
 
 def get_batch_name():
     """
@@ -130,7 +131,8 @@ def img2array3D(data_split, num_samples, num_frames):
         for image in images:
 
             # Load the image
-            original = load_img('../data/image_data/{}_data/{}/{}'.format(data_split, video, image), target_size=(224, 224))
+            original = load_img('../data/image_data/{}_data/{}/{}'.format(data_split, video, image),
+                                target_size=(224, 224))
 
             # Convert to numpy array
             numpy_image = img_to_array(original)
@@ -210,7 +212,7 @@ def extract_images(partition, num_frames):
             length = num_frames + 1
             count = 0
 
-            while (cap.isOpened()):
+            while cap.isOpened():
                 count += 1
 
                 # Exit if at the end
@@ -258,6 +260,7 @@ def extract_audio(partition):
             # Create video object
             clip = mp.VideoFileClip('../data/video_data/{}/{}.mp4'.format(chunk, file_name))
             clip.audio.write_audiofile("../data/audio_data/{}_data/{}.mp3".format(partition, file_name))
+
 
 def extract_text(partition):
     """

@@ -50,17 +50,6 @@ def transform():
     #embedding_matrix, word_to_index = resources.create_embedding_matrix()
 
 
-
-
-
-
-
-
-
-
-
-
-
-    # Main section
-    if __name__ == '__main__':
-        main()
+# Main section
+if __name__ == '__main__':
+    main()
