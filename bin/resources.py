@@ -20,7 +20,7 @@ def download_first_impressions():
     # Set location of the server to download files from
     server = 'http://158.109.8.102/FirstImpressionsV2/'
 
-    # Download dictionaries that map relationships between downloaded files
+    # Load in  dictionaries that map relationships between downloaded files
     with open('../resources/file_tree.pkl', 'rb') as input_file:
         file_tree = pickle.load(input_file)
     with open('../resources/meta_tree.pkl', 'rb') as input_file:
@@ -29,6 +29,26 @@ def download_first_impressions():
     # Set the encryption keys to unzip password protected files
     encryption_key = 'zeAzLQN7DnSIexQukc9W'
     alt_encryption_key = '.chalearnLAPFirstImpressionsSECONDRoundICPRWorkshop2016.'
+
+    # Check if meta files are downloaded
+    meta_downloads = [
+
+        'test-annotation-e.zip',
+        'test-transcription-e.zip',
+        'train-annotation.zip',
+        'train-transcription.zip',
+        'val-annotation-e.zip',
+        'val-transcription.zip'
+    ]
+
+    for file in meta_downloads:
+
+        fi_downloaded_path = '../resources/compressed/{}'.format(file)
+        if not os.path.exists(fi_downloaded_path):
+            logging.warning('{} does not exists...downloading'.format(file))
+
+            # Download the file
+            download_file(server + file, fi_downloaded_path, auth=True)
 
     # Check if the meta files are in the correct location
     for file in meta_tree.keys():
@@ -61,7 +81,7 @@ def download_first_impressions():
         # Define path to compressed files
         fi_downloaded_path = '../resources/compressed/{}'.format(file)
 
-        # Download embeddings, if necessary
+        # Download files, if necessary
         if not os.path.exists(fi_downloaded_path):
             logging.warning('{} does not exist. Downloading {}.'.format(file, file))
             logging.info(
@@ -73,14 +93,12 @@ def download_first_impressions():
     for file_chunk in file_tree.keys():
 
         if not os.path.exists('../data/video_data/{}'.format(file_chunk)):
-
             auth = encryption_key
-
             logging.debug('Extracting {}'.format(file_tree[file_chunk]))
 
             # Unzip file chunks from main download blocks
             subprocess.call(['unzip',
-                             '-n',
+                             #'-n',
                              '-P',
                              encryption_key,
                              '../resources/compressed/{}'.format(file_tree[file_chunk]),
@@ -89,22 +107,26 @@ def download_first_impressions():
 
             # Handle funky zipping of the test sets
             if file_tree[file_chunk] == 'test-1e.zip':
-                all_files = os.listdir('../data/video_data/test-1/')
-                for file in all_files:
-                    subprocess.call(['mv', '../data/video_data/test-1/{}'.format(file), '../data/video_data/'])
-                subprocess.call(['rm', '-r', '../data/video_data/test-1/'])
+
+                # Function to extract one level deeper than normal
+                handle_funky_zip('test-1', auth=alt_encryption_key)
                 auth = alt_encryption_key
 
             elif file_tree[file_chunk] == 'test-2e.zip':
-                all_files = os.listdir('../data/video_data/test-2/')
-                for file in all_files:
-                    subprocess.call(['mv', '../data/video_data/test-2/{}'.format(file), '../data/video_data/'])
-                subprocess.call(['rm', '-r', '../data/video_data/test-2/'])
+
+                # Function to extract one level deeper than normal
+                handle_funky_zip('test-2', auth=alt_encryption_key)
                 auth = alt_encryption_key
 
             # Unzip contents into newly created directory
             zipped_chunks = [i for i in os.listdir('../data/video_data/') if '.zip' in i]
             for to_extract in zipped_chunks:
+
+                # Create new directory if does not exist for the video dump
+                if not os.path.exists('../data/video_data/{}/'.format(to_extract.split('.zip')[0])):
+                    subprocess.call(['mkdir',
+                                     '../data/video_data/{}/'.format(to_extract.split('.zip')[0])])
+
                 subprocess.call(['unzip',
                                  '-P',
                                  auth,
@@ -225,3 +247,24 @@ def create_embedding_matrix():
                                                                                           max(word_to_index.values())))
 
     return embedding_matrix, word_to_index
+
+def handle_funky_zip(file_chunk, auth):
+    """
+
+    Unzips an extra layer deeper for the test sets
+    :param file_chunk: downloaded file from website
+    :return:
+    """
+
+    all_files = os.listdir('../data/video_data/{}/'.format(file_chunk))
+    for file in all_files:
+        subprocess.call(['unzip',
+                         '-P',
+                         auth,
+                         '../data/video_data/{}/{}'.format(file_chunk, file),
+                         '-d',
+                         '../data/video_data/'])
+        subprocess.call(['chmod', '777', '../data/video_data/{}'.format(file)])
+    subprocess.call(['rm', '-r', '../data/video_data/{}/'.format(file_chunk)])
+
+    pass
