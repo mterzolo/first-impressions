@@ -1,8 +1,4 @@
-import cv2
-import os
 import logging
-import moviepy.editor as mp
-
 import lib
 import resources
 
@@ -33,25 +29,35 @@ def extract():
     resources.download_embedding()
 
     # Extract images, audio files, and text transcripts for each partition
-    for partition in ['training', 'test', 'validation']:
+    for partition in ['test', 'validation']:
 
-        # Chop video up into images and save into seperate directory
+        # Chop video up into images and save into separate directory
         lib.extract_images(partition, num_frames=20)
 
-        # Strip audio from mp4 and save in seperate directory
+        # Strip audio from mp4 and save in separate directory
         lib.extract_audio(partition)
 
         # Take text from transcripts
-        lib.extract_text()
+        lib.extract_text(partition)
+
+    # Create word embeddings for text model
+    resources.create_embedding_matrix()
 
     pass
 
 
 def transform():
 
-    #embedding_matrix, word_to_index = resources.create_embedding_matrix()
+    for partition in ['training', 'test', 'validation']:
+
+        # Transform raw audio to melspectrograms
+        lib.audio2melspec(partition=partition)
+
+        # Transform raw jpegs into numpy arrays
+        lib.img2array(partition=partition)
 
     pass
+
 
 # Main section
 if __name__ == '__main__':

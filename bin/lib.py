@@ -75,14 +75,14 @@ def get_batch_name():
     return BATCH_NAME
 
 
-def img2array(data_split, num_samples, frame_num):
+def img2array(partition, num_samples, frame_num):
 
     # Open answers file
-    with open('../data/meta_data/annotation_{}.pkl'.format(data_split), 'rb') as f:
+    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
         label_file = pickle.load(f, encoding='latin1')
 
     # Get all IDs for videos for the training set
-    vid_ids = os.listdir('../data/image_data/{}_data'.format(data_split))[0:num_samples]
+    vid_ids = os.listdir('../data/image_data/{}_data'.format(partition))[0:num_samples]
     y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
 
     # Create empty array to store image data
@@ -92,7 +92,7 @@ def img2array(data_split, num_samples, frame_num):
     for video in vid_ids:
 
         # Load the image
-        filename = '../data/image_data/{}_data/{}/frame{}.jpg'.format(data_split, video, frame_num)
+        filename = '../data/image_data/{}_data/{}/frame{}.jpg'.format(partition, video, frame_num)
         original = load_img(filename, target_size=(224, 224))
 
         # Convert to numpy array
@@ -105,7 +105,13 @@ def img2array(data_split, num_samples, frame_num):
 
         counter += 1
 
-    return X, y
+        # Save arrays as pickled files
+        with open('../data/image_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
+            pickle.dump(X, output)
+        with open('../data/image_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
+            pickle.dump(y, output)
+
+    pass
 
 
 def img2array3D(data_split, num_samples, num_frames):
@@ -154,30 +160,48 @@ def img2array3D(data_split, num_samples, num_frames):
     return X, y
 
 
-def audio2melspec(data_split, num_samples):
+def audio2melspec(partition):
 
     # Open answers file
-    with open('../data/meta_data/annotation_{}.pkl'.format(data_split), 'rb') as f:
+    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
         label_file = pickle.load(f, encoding='latin1')
 
     # Get all IDs for videos for the training set
-    audio_files = os.listdir('../data/audio_data/{}_data'.format(data_split))[0:num_samples]
+    audio_files = os.listdir('../data/audio_data/{}_data'.format(partition))
     audio_files = [i.split('.mp3')[0] for i in audio_files]
     y = [label_file['interview'][i + '.mp4'] for i in audio_files]
 
     # Create empty array to store image data
-    X = np.zeros(shape=(num_samples, 128, 662))
+    X = np.zeros(shape=(len(y), 128, 662))
     counter = 0
 
     for audio in audio_files:
 
-        aud, sr = librosa.load('../data/audio_data/{}_data/{}.mp3'.format(data_split, audio))
+        # Transform to mel spectrogram
+        aud, sr = librosa.load('../data/audio_data/{}_data/{}.mp3'.format(partition, audio))
         mel_spec = librosa.feature.melspectrogram(y=aud)
-        mel_spec = cv2.resize(mel_spec, dsize=(662, 128), interpolation=cv2.INTER_CUBIC)
-        mel_spec = mel_spec / np.max(mel_spec)
-        X[counter] = mel_spec
 
-    return X, y
+        # Clip if longer than 15 seconds
+        mel_spec = mel_spec[:128, :662]
+        mel_spec = mel_spec / np.max(mel_spec)
+
+        # Pad the end if shorter than 15 seconds
+        X = np.zeros(X[0].shape)
+
+        # Save in respective place in the array
+        X[:mel_spec.shape[0], :mel_spec.shape[1]][counter] = mel_spec
+        counter += 1
+
+        # Reshape for model
+        X = X.reshape(X.shape[0], 128, 662, 1)
+
+        # Save arrays as pickled files
+        with open('../data/audio_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
+            pickle.dump(X, output)
+        with open('../data/audio_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
+            pickle.dump(y, output)
+
+    pass
 
 
 def extract_images(partition, num_frames):
