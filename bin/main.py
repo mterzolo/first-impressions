@@ -1,6 +1,9 @@
+import pickle
 import logging
+import models
 import lib
 import resources
+from keras.callbacks import ModelCheckpoint
 
 
 def main():
@@ -14,8 +17,10 @@ def main():
 
     extract()
     transform()
+    model()
 
     pass
+
 
 def extract():
     """
@@ -38,7 +43,7 @@ def extract():
         lib.extract_audio(partition)
 
         # Take text from transcripts
-        lib.extract_text(partition)
+        #lib.extract_text(partition)
 
     # Create word embeddings for text model
     resources.create_embedding_matrix()
@@ -55,6 +60,58 @@ def transform():
 
         # Transform raw jpegs into numpy arrays
         lib.img2array(partition=partition)
+
+    pass
+
+
+def model(image=False, audio=True, text=False):
+
+    if image:
+
+        # Load data
+        with open('../data/image_data/pickle_files/X_train.pkl', 'rb') as file:
+            X_train = pickle.load(file)
+        with open('../data/image_data/pickle_files/y_train.pkl', 'rb') as file:
+            y_train = pickle.load(file)
+        with open('../data/image_data/pickle_files/X_test.pkl', 'rb') as file:
+            X_test = pickle.load(file)
+        with open('../data/image_data/pickle_files/y_test.pkl', 'rb') as file:
+            y_test = pickle.load(file)
+
+        # Create model and fit
+        image_model = models.image_cnn_model()
+        filename = '../output/image_model.h5'
+        checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+        image_model.fit(X_train, y_train,
+                  validation_data=(X_test, y_test),
+                  epochs=150, batch_size=32,
+                  callbacks=[checkpoint])
+
+    if audio:
+
+        # Load data
+        with open('../data/audio_data/pickle_files/X_train.pkl', 'rb') as file:
+            X_train = pickle.load(file)
+        with open('../data/audio_data/pickle_files/y_train.pkl', 'rb') as file:
+            y_train = pickle.load(file)
+        with open('../data/audio_data/pickle_files/X_test.pkl', 'rb') as file:
+            X_test = pickle.load(file)
+        with open('../data/audio_data/pickle_files/y_test.pkl', 'rb') as file:
+            y_test = pickle.load(file)
+
+        # Create model object and fit
+        audio_model = models.audio_cnn_model()
+        filename = '../output/audio_model.h5'
+        checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+        audio_model.fit(X_train, y_train,
+                        batch_size=128, epochs=20,
+                        validation_data=(X_test, y_test),
+                        callbacks=[checkpoint])
+    if text:
+
+        #TODO build text model
+
+
 
     pass
 

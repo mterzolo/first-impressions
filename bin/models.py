@@ -3,10 +3,45 @@ import logging
 import keras
 from keras.engine import Model
 from keras.layers import Dense, Embedding, Conv1D, Conv2D, MaxPooling1D, Flatten
+from keras.applications import vgg16
+from keras.models import Model
+from keras.layers import Dense, Flatten, Dropout
+from keras.callbacks import ModelCheckpoint
 
 
+def image_cnn_model():
 
-def text_conv_model(transcripts, embedding_matrix, word_to_index):
+    # Load the VGG16 model
+    base_model = vgg16.VGG16(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
+    x = base_model.output
+
+    # Create additional layers
+    x = Flatten()(x)
+    x = Dense(1024, activation='relu')(x)
+    x = Dropout(.4)(x)
+    x = Dense(256, activation='relu')(x)
+    x = Dropout(.4)(x)
+    preds = Dense(1, activation='linear')(x)
+
+    # Freeze all original layers
+    for layer in base_model.layers:
+        layer.trainable = False
+
+    # Optimizer
+    optimizer = keras.optimizers.Adam(lr=0.001, decay=0.0006)
+
+    # fit model
+    filename = '../output/image_model.h5'
+    checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+
+    # Create the model
+    model = Model(base_model.input, preds)
+    model.compile(optimizer=optimizer, loss='mean_squared_error')
+
+    pass
+
+
+def text_cnn_model(transcripts, embedding_matrix, word_to_index):
     """
     Generate a convolutional neural network model, with an embedding layer.
     :param transcripts: A Pandas DataFrame containing the field padded_indices
@@ -58,7 +93,7 @@ def text_conv_model(transcripts, embedding_matrix, word_to_index):
     text_model = Model(sequence_input, preds)
     text_model.compile(loss='mse', optimizer='rmsprop')
 
-    return text_model
+    pass
 
 def audio_cnn_model():
     """
@@ -66,8 +101,10 @@ def audio_cnn_model():
     :return:
     """
 
+    # Define the dimensions for the mel spectrogram to be fed into the model
     input_shape = (128, 662, 1)
 
+    # Define the model architecture
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(5, 5), strides=(1, 1),
                      activation='relu',
@@ -79,7 +116,9 @@ def audio_cnn_model():
     model.add(Dense(1024, activation='relu'))
     model.add(Dense(1, activation='linear'))
 
-    # fit model
+    # Fit model
     filename = '../output/audio_model.h5'
     checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
-    model.compile(optimizer='Adam', loss='mean_squared_error')
+    model.compile(optimizer='Adam', loss='mean_squared_error', callbacks=[checkpoint])
+
+    pass
