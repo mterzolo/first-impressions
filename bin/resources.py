@@ -138,6 +138,8 @@ def download_first_impressions():
                 # Remove empty folder that is created in the process
                 subprocess.call(['rm', '../data/video_data/{}'.format(to_extract)])
 
+    pass
+
 def download_embedding():
     """
     Prepare GoogleNews pre-trained word embeddings.
@@ -175,6 +177,8 @@ def download_embedding():
             unzipped.write(line)
 
     logging.info('Embeddings available at: {}'.format(get_conf('embedding_path')))
+
+    pass
 
 
 def download_file(url, local_file_path, auth=False):
@@ -246,11 +250,16 @@ def create_embedding_matrix():
     logging.info('Created word to index lookup, with min index: {}, max index: {}'.format(min(word_to_index.values()),
                                                                                           max(word_to_index.values())))
 
+    # Save as pickled files
+    with open('../resources/word_to_index.pkl', 'wb') as output:
+        pickle.dump(word_to_index, output)
+    with open('../resources/embedding_matrix.pkl', 'wb') as output:
+        pickle.dump(embedding_matrix, output)
+
     return embedding_matrix, word_to_index
 
 def handle_funky_zip(file_chunk, auth):
     """
-
     Unzips an extra layer deeper for the test sets
     :param file_chunk: downloaded file from website
     :return:
@@ -258,13 +267,16 @@ def handle_funky_zip(file_chunk, auth):
 
     all_files = os.listdir('../data/video_data/{}/'.format(file_chunk))
     for file in all_files:
-        subprocess.call(['unzip',
-                         '-P',
-                         auth,
+
+        # Unzip and put one directory back
+        subprocess.call(['unzip', '-P', auth,
                          '../data/video_data/{}/{}'.format(file_chunk, file),
-                         '-d',
-                         '../data/video_data/'])
+                         '-d', '../data/video_data/'])
+
+        # Change permissions on newly created file
         subprocess.call(['chmod', '777', '../data/video_data/{}'.format(file)])
+
+    # Remove unnecessary directory
     subprocess.call(['rm', '-r', '../data/video_data/{}/'.format(file_chunk)])
 
     pass
