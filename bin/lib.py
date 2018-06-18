@@ -77,18 +77,18 @@ def get_batch_name():
     return BATCH_NAME
 
 
-def img2array(partition, num_samples, frame_num):
+def img2array(partition, frame_num):
 
     # Open answers file
     with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
         label_file = pickle.load(f, encoding='latin1')
 
     # Get all IDs for videos for the training set
-    vid_ids = os.listdir('../data/image_data/{}_data'.format(partition))[0:num_samples]
+    vid_ids = os.listdir('../data/image_data/{}_data'.format(partition))
     y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
 
     # Create empty array to store image data
-    X = np.empty(shape=(num_samples, 224, 224, 3))
+    X = np.empty(shape=(len(y), 224, 224, 3))
     counter = 0
 
     for video in vid_ids:
@@ -322,13 +322,47 @@ def extract_text(partition):
 
     logging.info('Begin Text Extraction')
 
-    # Open transcript
+    # Open transcript and annotations
     with open('../data/meta_data/transcription_{}.pkl'.format(partition), 'rb') as f:
         transcript = pickle.load(f, encoding='latin1')
+    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
+        annotation = pickle.load(f, encoding='latin1')
 
     # Transform into a dataframe
-    pd.DataFrame({'file': list(transcript.keys()),
-                  'transcript': list(transcript.values())})
+    text_df = pd.DataFrame({'file': list(transcript.keys()),
+                            'transcript': list(transcript.values())})
+
+    # Map in annotations
+    text_df['interview_score'] = text_df['file'].map(annotation['interview'])
+
+    # Create directory if it doesnt exist
+    if not os.path.exists('../data/text_data/{}_data/'.format(partition)):
+        os.makedirs('../data/text_data/{}_data/'.format(partition))
 
     # Save into text data directory
-    pd.to_csv('../data/text_data/{}_data.csv'.format(partition), index=False)
+    text_df.to_csv('../data/text_data/{}_data/{}_transcripts.csv'.format(partition), partition, index=False)
+
+
+def transform_text(partition):
+
+    logging.info('Begin text transformation on {}'.format(partition))
+
+    # Load in embedding resources and transcripts
+    with open('../resources/embedding_matrix.pkl', 'rb') as f:
+        embedding_matrix = pickle.load(f, encoding='latin1')
+    with open('../resources/word_to_index.pkl', 'rb') as f:
+        word_to_index = pickle.load(f, encoding='latin1')
+    observations = pd.read_csv('../data/text_data')
+
+    # Transform embedding resources
+    default_dict_instance = defaultdict(lambda: word_to_index['UNK'])
+    default_dict_instance.update(word_to_index)
+    word_to_index = default_dict_instance
+
+    # Newsgroup20: Convert text to normalized tokens. Unknown tokens will map to 'UNK'.
+    observations['tokens'] = observations['text'].apply(simple_preprocess)
+
+    # Newsgroup20: Convert tokens to indices
+    observations['indices'] = observations['tokens'].apply(lambda token_list: map(lambda token: word_to_index[token],
+                                                                                  token_list))
+    observations['indices'] = observations['indices'].apply(lambda x: numpy.array(x))

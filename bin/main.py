@@ -15,7 +15,7 @@ def main():
 
     logging.getLogger().setLevel(level=logging.INFO)
 
-    extract()
+    #extract()
     transform()
     #model()
 
@@ -59,7 +59,7 @@ def transform():
         lib.audio2melspec(partition=partition)
 
         # Transform raw jpegs into numpy arrays
-        lib.img2array(partition=partition)
+        lib.img2array(partition=partition, frame_num=4)
 
     pass
 
@@ -104,7 +104,7 @@ def model(image=False, audio=True, text=False):
         filename = '../output/audio_model.h5'
         checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         audio_model.fit(X_train, y_train,
-                        batch_size=128, epochs=20,
+                        batch_size=128, epochs=100,
                         validation_data=(X_test, y_test),
                         callbacks=[checkpoint])
     if text:
