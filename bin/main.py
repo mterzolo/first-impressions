@@ -17,7 +17,7 @@ def main():
 
     extract()
     transform()
-    model()
+    #model()
 
     pass
 
@@ -37,16 +37,18 @@ def extract():
     for partition in ['test', 'validation']:
 
         # Chop video up into images and save into separate directory
-        lib.extract_images(partition, num_frames=20)
+        #lib.extract_images(partition, num_frames=20)
 
         # Strip audio from mp4 and save in separate directory
-        lib.extract_audio(partition)
+        #lib.extract_audio(partition)
 
         # Take text from transcripts
         #lib.extract_text(partition)
 
     # Create word embeddings for text model
-    resources.create_embedding_matrix()
+    #resources.create_embedding_matrix()
+
+        pass
 
     pass
 
@@ -83,9 +85,9 @@ def model(image=False, audio=True, text=False):
         filename = '../output/image_model.h5'
         checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         image_model.fit(X_train, y_train,
-                  validation_data=(X_test, y_test),
-                  epochs=150, batch_size=32,
-                  callbacks=[checkpoint])
+                        validation_data=(X_test, y_test),
+                        epochs=150, batch_size=32,
+                        callbacks=[checkpoint])
 
     if audio:
 
@@ -109,7 +111,7 @@ def model(image=False, audio=True, text=False):
                         callbacks=[checkpoint])
     if text:
 
-        #TODO build text model
+        pass
 
 
 

@@ -6,6 +6,7 @@ import numpy as np
 from keras.applications import vgg16
 from keras.preprocessing.image import load_img
 from keras.preprocessing.image import img_to_array
+from keras import backend as K
 import datetime
 import logging
 import os
@@ -161,6 +162,10 @@ def img2array3D(data_split, num_samples, num_frames):
 
 
 def audio2melspec(partition):
+    '''Reads an audio file and outputs a Mel-spectrogram.
+    '''
+
+    logging.info('Begin audio transformations')
 
     # Open answers file
     with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
@@ -172,34 +177,46 @@ def audio2melspec(partition):
     y = [label_file['interview'][i + '.mp4'] for i in audio_files]
 
     # Create empty array to store image data
-    X = np.zeros(shape=(len(y), 128, 662))
+    X = np.zeros(shape=(len(y), 96, 704))
     counter = 0
 
     for audio in audio_files:
 
-        # Transform to mel spectrogram
-        aud, sr = librosa.load('../data/audio_data/{}_data/{}.mp3'.format(partition, audio))
-        mel_spec = librosa.feature.melspectrogram(y=aud)
+        logging.debug('Transforming partition: {} file: {}'.format(partition, audio))
 
-        # Clip if longer than 15 seconds
-        mel_spec = mel_spec[:128, :662]
-        mel_spec = mel_spec / np.max(mel_spec)
+        # Mel-spectrogram parameters
+        SR = 12000
+        N_FFT = 512
+        N_MELS = 96
+        HOP_LEN = 256
+        DURA = 15
 
-        # Pad the end if shorter than 15 seconds
-        X = np.zeros(X[0].shape)
+        # Load audio file
+        src, sr = librosa.load('../data/audio_data/{}_data/{}.mp3'.format(partition, audio), sr=SR)
+        n_sample = src.shape[0]
+        n_sample_wanted = int(DURA * SR)
 
-        # Save in respective place in the array
-        X[:mel_spec.shape[0], :mel_spec.shape[1]][counter] = mel_spec
-        counter += 1
+        # Trim the signal at the center
+        if n_sample < n_sample_wanted:  # if too short
+            src = np.hstack((src, np.zeros((int(DURA * SR) - n_sample,))))
+        elif n_sample > n_sample_wanted:  # if too long
+            src = src[(n_sample - n_sample_wanted) // 2:
+                      (n_sample + n_sample_wanted) // 2]
 
-        # Reshape for model
-        X = X.reshape(X.shape[0], 128, 662, 1)
+        # Convert to log scaled mel-spec
+        logam = librosa.core.power_to_db
+        melgram = librosa.feature.melspectrogram
+        logmelspec = logam(melgram(y=src, sr=SR, hop_length=HOP_LEN,
+                                   n_fft=N_FFT, n_mels=N_MELS) ** 2, ref=1.0)
+        X[counter] = logmelspec
 
-        # Save arrays as pickled files
-        with open('../data/audio_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
-            pickle.dump(X, output)
-        with open('../data/audio_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
-            pickle.dump(y, output)
+    logging.info('{} audio transformation complete, saving to file'.format(partition))
+
+    # Save arrays as pickled files
+    with open('../data/audio_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(X, output)
+    with open('../data/audio_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(y, output)
 
     pass
 
