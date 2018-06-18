@@ -1,12 +1,16 @@
 import logging
 
 import keras
-from keras.engine import Model
-from keras.layers import Dense, Embedding, Conv1D, Conv2D, MaxPooling1D, Flatten
+from keras.layers import Embedding, Conv1D, MaxPooling1D
 from keras.applications import vgg16
 from keras.models import Model
-from keras.layers import Dense, Flatten, Dropout
+from keras.layers import Dense, Flatten, Dropout, Input
 from keras.callbacks import ModelCheckpoint
+from keras.layers.convolutional import Convolution2D
+from keras.layers.convolutional import MaxPooling2D, ZeroPadding2D
+from keras.layers.normalization import BatchNormalization
+from keras.layers.advanced_activations import ELU
+from keras.layers.recurrent import GRU
 
 
 def image_cnn_model():
@@ -50,7 +54,6 @@ def audio_cnn_model():
     # Define the dimensions for the mel spectrogram to be fed into the model
     input_shape = (96, 704, 1)
     channel_axis = 3
-    freq_axis = 1
     time_axis = 2
     melgram_input = Input(shape=input_shape)
 
