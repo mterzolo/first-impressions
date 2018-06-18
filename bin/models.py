@@ -41,6 +41,65 @@ def image_cnn_model():
     pass
 
 
+def audio_cnn_model():
+    """
+    Generate convulutional nerual network for audio data
+    :return:
+    """
+
+    # Define the dimensions for the mel spectrogram to be fed into the model
+    input_shape = (96, 704, 1)
+    channel_axis = 3
+    freq_axis = 1
+    time_axis = 2
+    melgram_input = Input(shape=input_shape)
+
+    # Input block
+    x = ZeroPadding2D(padding=(0, 37))(melgram_input)
+    x = BatchNormalization(axis=time_axis, name='bn_0_freq')(x)
+
+    # Conv block 1
+    x = Convolution2D(64, 3, 3, border_mode='same', name='conv1')(x)
+    x = BatchNormalization(axis=channel_axis, mode=0, name='bn1')(x)
+    x = ELU()(x)
+    x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), name='pool1')(x)
+
+    # Conv block 2
+    x = Convolution2D(128, 3, 3, border_mode='same', name='conv2')(x)
+    x = BatchNormalization(axis=channel_axis, mode=0, name='bn2')(x)
+    x = ELU()(x)
+    x = MaxPooling2D(pool_size=(3, 3), strides=(3, 3), name='pool2')(x)
+
+    # Conv block 3
+    x = Convolution2D(128, 3, 3, border_mode='same', name='conv3')(x)
+    x = BatchNormalization(axis=channel_axis, mode=0, name='bn3')(x)
+    x = ELU()(x)
+    x = MaxPooling2D(pool_size=(4, 4), strides=(4, 4), name='pool3')(x)
+
+    # Conv block 4
+    x = Convolution2D(128, 3, 3, border_mode='same', name='conv4')(x)
+    x = BatchNormalization(axis=channel_axis, mode=0, name='bn4')(x)
+    x = ELU()(x)
+    x = MaxPooling2D(pool_size=(4, 4), strides=(4, 4), name='pool4')(x)
+
+    # GRU block 1, 2, output
+    x = GRU(32, return_sequences=True, name='gru1')(x)
+    x = GRU(32, return_sequences=False, name='gru2')(x)
+
+    # Final layer for predictions
+    x = Dense(1, activation='linear')(x)
+
+    # Create model
+    model = Model(melgram_input, x)
+
+    # Fit model
+    filename = '../output/audio_model.h5'
+    checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+    model.compile(optimizer='Adam', loss='mean_squared_error', callbacks=[checkpoint])
+
+    pass
+
+
 def text_cnn_model(transcripts, embedding_matrix, word_to_index):
     """
     Generate a convolutional neural network model, with an embedding layer.
@@ -92,33 +151,5 @@ def text_cnn_model(transcripts, embedding_matrix, word_to_index):
     # Compile architecture
     text_model = Model(sequence_input, preds)
     text_model.compile(loss='mse', optimizer='rmsprop')
-
-    pass
-
-def audio_cnn_model():
-    """
-    Generate convulutional nerual network for audio data
-    :return:
-    """
-
-    # Define the dimensions for the mel spectrogram to be fed into the model
-    input_shape = (128, 662, 1)
-
-    # Define the model architecture
-    model = Sequential()
-    model.add(Conv2D(32, kernel_size=(5, 5), strides=(1, 1),
-                     activation='relu',
-                     input_shape=input_shape))
-    model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-    model.add(Conv2D(64, (5, 5), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Flatten())
-    model.add(Dense(1024, activation='relu'))
-    model.add(Dense(1, activation='linear'))
-
-    # Fit model
-    filename = '../output/audio_model.h5'
-    checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
-    model.compile(optimizer='Adam', loss='mean_squared_error', callbacks=[checkpoint])
 
     pass
