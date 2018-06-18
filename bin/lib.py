@@ -1,4 +1,3 @@
-import os
 import subprocess
 import pickle
 import librosa
@@ -7,14 +6,14 @@ import numpy as np
 from keras.applications import vgg16
 from keras.preprocessing.image import load_img
 from keras.preprocessing.image import img_to_array
-from keras import backend as K
 import datetime
 import logging
 import os
-import moviepy.editor as mp
 import pandas as pd
 import yaml
 from keras.preprocessing.sequence import pad_sequences
+from gensim.utils import simple_preprocess
+from collections import defaultdict
 
 # Global variables
 CONFS = None
@@ -302,14 +301,7 @@ def extract_audio(partition):
             subprocess.call(['ffmpeg',
                              file_name,
                              '../data/audio_data/{}_data/{}.mp3'.format(partition, file_name)])
-
-            """
-            # Create video object
-            clip = mp.VideoFileClip('../data/video_data/{}/{}.mp4'.format(chunk, file_name))
-            clip.audio.write_audiofile("../data/audio_data/{}_data/{}.mp3".format(partition, file_name))
-            del clip.reader
-            del clip
-            """
+    pass
 
 
 def extract_text(partition):
@@ -340,7 +332,7 @@ def extract_text(partition):
         os.makedirs('../data/text_data/{}_data/'.format(partition))
 
     # Save into text data directory
-    text_df.to_csv('../data/text_data/{}_data/{}_transcripts.csv'.format(partition), partition, index=False)
+    text_df.to_csv('../data/text_data/{}_data/{}_transcripts.csv'.format(partition, partition), index=False)
 
 
 def transform_text(partition):
@@ -352,17 +344,22 @@ def transform_text(partition):
         embedding_matrix = pickle.load(f, encoding='latin1')
     with open('../resources/word_to_index.pkl', 'rb') as f:
         word_to_index = pickle.load(f, encoding='latin1')
-    observations = pd.read_csv('../data/text_data')
+    observations = pd.read_csv('../data/text_data/{}_data/{}_transcripts.csv'.format(partition, partition))
 
     # Transform embedding resources
     default_dict_instance = defaultdict(lambda: word_to_index['UNK'])
     default_dict_instance.update(word_to_index)
     word_to_index = default_dict_instance
 
-    # Newsgroup20: Convert text to normalized tokens. Unknown tokens will map to 'UNK'.
-    observations['tokens'] = observations['text'].apply(simple_preprocess)
+    # Convert text to normalized tokens. Unknown tokens will map to 'UNK'.
+    observations['tokens'] = observations['transcript'].apply(simple_preprocess)
 
-    # Newsgroup20: Convert tokens to indices
+    # Convert tokens to indices
     observations['indices'] = observations['tokens'].apply(lambda token_list: map(lambda token: word_to_index[token],
                                                                                   token_list))
     observations['indices'] = observations['indices'].apply(lambda x: numpy.array(x))
+
+    # Pad indices list with zeros, so that every article's list of indices is the same length
+    max_length = np.max(observations['tokens'].apply(lambda x: len(x)))
+    observations['padded_indices'] = pad_sequences(observations['indices'], max_length)
+
