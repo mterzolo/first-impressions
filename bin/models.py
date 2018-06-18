@@ -137,7 +137,6 @@ def text_cnn_model(transcripts, embedding_matrix, word_to_index):
                                 weights=[embedding_matrix],
                                 input_length=embedding_input_length,
                                 trainable=False)
-
     sequence_input = keras.Input(shape=(embedding_input_length,), dtype='int32')
     embedded_sequences = embedding_layer(sequence_input)
     x = Conv1D(128, 5, activation='relu')(embedded_sequences)
@@ -148,7 +147,6 @@ def text_cnn_model(transcripts, embedding_matrix, word_to_index):
     x = MaxPooling1D(35)(x)
     x = Flatten()(x)
     x = Dense(128, activation='relu')(x)
-
     preds = Dense(units=1, activation='linear')(x)
 
     # Compile architecture
