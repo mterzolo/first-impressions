@@ -1,4 +1,5 @@
 import os
+import subprocess
 import pickle
 import librosa
 import cv2
@@ -298,11 +299,17 @@ def extract_audio(partition):
         for file_name in files:
             file_name = file_name.split('.mp4')[0]
 
+            subprocess.call(['ffmpeg',
+                             file_name,
+                             '../data/audio_data/{}_data/{}.mp3'.format(partition, file_name)])
+
+            """
             # Create video object
             clip = mp.VideoFileClip('../data/video_data/{}/{}.mp4'.format(chunk, file_name))
             clip.audio.write_audiofile("../data/audio_data/{}_data/{}.mp3".format(partition, file_name))
             del clip.reader
             del clip
+            """
 
 
 def extract_text(partition):
