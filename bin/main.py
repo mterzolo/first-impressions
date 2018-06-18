@@ -13,7 +13,7 @@ def main():
     :return:
     """
 
-    logging.getLogger().setLevel(level=logging.DEBUG)
+    logging.getLogger().setLevel(level=logging.INFO)
 
     extract()
     transform()
@@ -34,21 +34,19 @@ def extract():
     resources.download_embedding()
 
     # Extract images, audio files, and text transcripts for each partition
-    for partition in ['test', 'validation']:
+    for partition in ['training', 'test', 'validation']:
 
         # Chop video up into images and save into separate directory
-        #lib.extract_images(partition, num_frames=20)
+        lib.extract_images(partition, num_frames=20)
 
         # Strip audio from mp4 and save in separate directory
-        #lib.extract_audio(partition)
+        lib.extract_audio(partition)
 
         # Take text from transcripts
-        #lib.extract_text(partition)
+        lib.extract_text(partition)
 
     # Create word embeddings for text model
-    #resources.create_embedding_matrix()
-
-        pass
+    resources.create_embedding_matrix()
 
     pass
 

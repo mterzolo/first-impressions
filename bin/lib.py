@@ -301,6 +301,8 @@ def extract_audio(partition):
             # Create video object
             clip = mp.VideoFileClip('../data/video_data/{}/{}.mp4'.format(chunk, file_name))
             clip.audio.write_audiofile("../data/audio_data/{}_data/{}.mp3".format(partition, file_name))
+            del clip.reader
+            del clip
 
 
 def extract_text(partition):
