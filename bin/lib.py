@@ -108,9 +108,9 @@ def img2array(partition, frame_num):
 
         # Save arrays as pickled files
         with open('../data/image_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
-            pickle.dump(X, output)
+            pickle.dump(X, output, protocol=4)
         with open('../data/image_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
-            pickle.dump(y, output)
+            pickle.dump(y, output, protocol=4)
 
     pass
 
@@ -214,9 +214,9 @@ def audio2melspec(partition):
 
     # Save arrays as pickled files
     with open('../data/audio_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(X, output)
+        pickle.dump(X, output, protocol=4)
     with open('../data/audio_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(y, output)
+        pickle.dump(y, output, protocol=4)
 
     pass
 
@@ -320,7 +320,7 @@ def extract_text(partition):
     with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
         annotation = pickle.load(f, encoding='latin1')
 
-    # Transform into a dataframe
+    # Transform into a data frame
     text_df = pd.DataFrame({'file': list(transcript.keys()),
                             'transcript': list(transcript.values())})
 
@@ -351,15 +351,27 @@ def transform_text(partition):
     default_dict_instance.update(word_to_index)
     word_to_index = default_dict_instance
 
+    # TODO remove words that were cutoff at the end of the video
+
     # Convert text to normalized tokens. Unknown tokens will map to 'UNK'.
     observations['tokens'] = observations['transcript'].apply(simple_preprocess)
 
     # Convert tokens to indices
     observations['indices'] = observations['tokens'].apply(lambda token_list: map(lambda token: word_to_index[token],
                                                                                   token_list))
-    observations['indices'] = observations['indices'].apply(lambda x: numpy.array(x))
+    observations['indices'] = observations['indices'].apply(lambda x: np.array(x))
 
     # Pad indices list with zeros, so that every article's list of indices is the same length
-    max_length = np.max(observations['tokens'].apply(lambda x: len(x)))
-    observations['padded_indices'] = pad_sequences(observations['indices'], max_length)
+    observations['padded_indices'] = pad_sequences(observations['indices'], 85)
 
+    # Create data sets for model
+    X = observations['padded_indices'].values
+    y = observations['interview_score'].values
+
+    # Save as pickled files
+    with open('../data/text_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(X, output, protocol=4)
+    with open('../data/text_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(y, output, protocol=4)
+
+    pass
