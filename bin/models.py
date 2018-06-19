@@ -85,14 +85,17 @@ def audio_cnn_model():
     x = ELU()(x)
     x = MaxPooling2D(pool_size=(4, 4), strides=(4, 4), name='pool4')(x)
 
+    """
     # Reshape for GROs
     x = Reshape((15, 128))(x)
 
     # GRU block 1, 2, output
     x = GRU(32, return_sequences=True, name='gru1')(x)
     x = GRU(32, return_sequences=False, name='gru2')(x)
+    """
 
     # Final layer for predictions
+    x = Dense(256, activation='relu')(x)
     x = Dense(1, activation='linear')(x)
 
     # Create model

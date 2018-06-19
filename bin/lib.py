@@ -179,7 +179,7 @@ def audio2melspec(partition):
     y = [label_file['interview'][i + '.mp4'] for i in audio_files]
 
     # Create empty array to store image data
-    X = np.zeros(shape=(len(y), 96, 704))
+    X = np.zeros(shape=(len(y), 96, 704, 1))
     counter = 0
 
     for audio in audio_files:
@@ -210,6 +210,7 @@ def audio2melspec(partition):
         melgram = librosa.feature.melspectrogram
         logmelspec = logam(melgram(y=src, sr=SR, hop_length=HOP_LEN,
                                    n_fft=N_FFT, n_mels=N_MELS) ** 2, ref=1.0)
+        logmelspec = np.expand_dims(logmelspec, axis=3)
         X[counter] = logmelspec
 
     logging.info('{} audio transformation complete, saving to file'.format(partition))
