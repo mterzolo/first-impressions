@@ -78,6 +78,8 @@ def get_batch_name():
 
 def img2array(partition, frame_num):
 
+    logging.info('Begin image transformations for {} partition'.format(partition))
+
     # Open answers file
     with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
         label_file = pickle.load(f, encoding='latin1')
@@ -103,14 +105,13 @@ def img2array(partition, frame_num):
         image_temp = np.expand_dims(numpy_image, axis=0)
         image_temp = vgg16.preprocess_input(image_temp)
         X[counter] = image_temp
-
         counter += 1
 
-        # Save arrays as pickled files
-        with open('../data/image_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
-            pickle.dump(X, output, protocol=4)
-        with open('../data/image_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
-            pickle.dump(y, output, protocol=4)
+    # Save arrays as pickled files
+    with open('../data/image_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(X, output, protocol=4)
+    with open('../data/image_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(y, output, protocol=4)
 
     pass
 
@@ -162,8 +163,9 @@ def img2array3D(data_split, num_samples, num_frames):
 
 
 def audio2melspec(partition):
-    '''Reads an audio file and outputs a Mel-spectrogram.
-    '''
+    """
+    Reads an audio file and outputs a Mel-spectrogram.
+    """
 
     logging.info('Begin audio transformations')
 
