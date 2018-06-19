@@ -47,7 +47,7 @@ def image_cnn_model():
 
 def audio_cnn_model():
     """
-    Generate convulutional nerual network for audio data
+    Generate convulutional neural network for audio data
     :return:
     """
 

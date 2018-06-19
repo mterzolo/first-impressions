@@ -302,7 +302,7 @@ def extract_audio(partition):
             file_name = file_name.split('.mp4')[0]
 
             subprocess.call(['ffmpeg',
-                             file_name,
+                             '../data/video_data/{}/{}.mp4'.format(chunk, file_name),
                              '../data/audio_data/{}_data/{}.mp3'.format(partition, file_name)])
     pass
 
