@@ -175,7 +175,7 @@ def audio2melspec(partition):
 
     # Get all IDs for videos for the training set
     audio_files = os.listdir('../data/audio_data/{}_data'.format(partition))
-    audio_files = [i.split('.mp3')[0] for i in audio_files]
+    audio_files = [i.split('.wav')[0] for i in audio_files]
     y = [label_file['interview'][i + '.mp4'] for i in audio_files]
     y = np.array(y)
 
@@ -195,7 +195,7 @@ def audio2melspec(partition):
         DURA = 15
 
         # Load audio file
-        src, sr = librosa.load('../data/audio_data/{}_data/{}.mp3'.format(partition, audio), sr=SR)
+        src, sr = librosa.load('../data/audio_data/{}_data/{}.wav'.format(partition, audio), sr=SR)
         n_sample = src.shape[0]
         n_sample_wanted = int(DURA * SR)
 
@@ -305,11 +305,9 @@ def extract_audio(partition):
 
             subprocess.call(['ffmpeg',
                              '-y',
-                             '-acodec',
-                             'libmp3lame',
                              '-i',
                              '../data/video_data/{}/{}.mp4'.format(chunk, file_name),
-                             '../data/audio_data/{}_data/{}.mp3'.format(partition, file_name)])
+                             '../data/audio_data/{}_data/{}.wav'.format(partition, file_name)])
     pass
 
 

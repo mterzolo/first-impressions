@@ -15,9 +15,9 @@ def main():
 
     logging.getLogger().setLevel(level=logging.INFO)
 
-    #extract()
-    #transform()
-    model()
+    extract()
+    transform()
+    #model()
 
     pass
 
@@ -30,14 +30,14 @@ def extract():
     """
 
     # Download resources
-    resources.download_first_impressions()
-    resources.download_embedding()
+    #resources.download_first_impressions()
+    #resources.download_embedding()
 
     # Extract images, audio files, and text transcripts for each partition
     for partition in ['training', 'test', 'validation']:
 
         # Chop video up into images and save into separate directory
-        lib.extract_images(partition, num_frames=20)
+        #lib.extract_images(partition, num_frames=20)
 
         # Strip audio from mp4 and save in separate directory
         lib.extract_audio(partition)
@@ -59,7 +59,7 @@ def transform():
         lib.audio2melspec(partition=partition)
 
         # Transform raw jpegs into numpy arrays
-        lib.img2array(partition=partition, frame_num=4)
+        #lib.img2array(partition=partition, frame_num=4)
 
     pass
 
