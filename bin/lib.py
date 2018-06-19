@@ -167,7 +167,7 @@ def audio2melspec(partition):
     Reads an audio file and outputs a Mel-spectrogram.
     """
 
-    logging.info('Begin audio transformations')
+    logging.info('Begin audio transformations for {} partition'.format(partition))
 
     # Open answers file
     with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:

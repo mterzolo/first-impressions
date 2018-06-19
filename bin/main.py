@@ -69,9 +69,9 @@ def model(image=False, audio=True, text=False):
     if image:
 
         # Load data
-        with open('../data/image_data/pickle_files/X_train.pkl', 'rb') as file:
+        with open('../data/image_data/pickle_files/X_training.pkl', 'rb') as file:
             X_train = pickle.load(file)
-        with open('../data/image_data/pickle_files/y_train.pkl', 'rb') as file:
+        with open('../data/image_data/pickle_files/y_training.pkl', 'rb') as file:
             y_train = pickle.load(file)
         with open('../data/image_data/pickle_files/X_test.pkl', 'rb') as file:
             X_test = pickle.load(file)
@@ -90,9 +90,9 @@ def model(image=False, audio=True, text=False):
     if audio:
 
         # Load data
-        with open('../data/audio_data/pickle_files/X_train.pkl', 'rb') as file:
+        with open('../data/audio_data/pickle_files/X_training.pkl', 'rb') as file:
             X_train = pickle.load(file)
-        with open('../data/audio_data/pickle_files/y_train.pkl', 'rb') as file:
+        with open('../data/audio_data/pickle_files/y_training.pkl', 'rb') as file:
             y_train = pickle.load(file)
         with open('../data/audio_data/pickle_files/X_test.pkl', 'rb') as file:
             X_test = pickle.load(file)

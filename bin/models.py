@@ -42,7 +42,7 @@ def image_cnn_model():
     model = Model(base_model.input, preds)
     model.compile(optimizer=optimizer, loss='mean_squared_error')
 
-    pass
+    return model
 
 
 def audio_cnn_model():
@@ -100,7 +100,7 @@ def audio_cnn_model():
     checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
     model.compile(optimizer='Adam', loss='mean_squared_error', callbacks=[checkpoint])
 
-    pass
+    return model
 
 
 def text_cnn_model(transcripts, embedding_matrix, word_to_index):
@@ -153,4 +153,4 @@ def text_cnn_model(transcripts, embedding_matrix, word_to_index):
     text_model = Model(sequence_input, preds)
     text_model.compile(loss='mse', optimizer='rmsprop')
 
-    pass
+    return text_model
