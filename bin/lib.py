@@ -305,6 +305,8 @@ def extract_audio(partition):
 
             subprocess.call(['ffmpeg',
                              '-y',
+                             '-acodec',
+                             'libmp3lame',
                              '-i',
                              '../data/video_data/{}/{}.mp4'.format(chunk, file_name),
                              '../data/audio_data/{}_data/{}.mp3'.format(partition, file_name)])
