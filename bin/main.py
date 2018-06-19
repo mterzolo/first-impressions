@@ -30,8 +30,8 @@ def extract():
     """
 
     # Download resources
-    #resources.download_first_impressions()
-    #resources.download_embedding()
+    resources.download_first_impressions()
+    resources.download_embedding()
 
     # Extract images, audio files, and text transcripts for each partition
     for partition in ['training', 'test', 'validation']:
