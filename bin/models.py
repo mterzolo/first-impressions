@@ -4,7 +4,7 @@ import keras
 from keras.layers import Embedding, Conv1D, MaxPooling1D
 from keras.applications import vgg16
 from keras.models import Model
-from keras.layers import Dense, Flatten, Dropout, Input
+from keras.layers import Dense, Flatten, Dropout, Input, Reshape
 from keras.callbacks import ModelCheckpoint
 from keras.layers.convolutional import Convolution2D
 from keras.layers.convolutional import MaxPooling2D, ZeroPadding2D
@@ -84,6 +84,9 @@ def audio_cnn_model():
     x = BatchNormalization(axis=channel_axis, mode=0, name='bn4')(x)
     x = ELU()(x)
     x = MaxPooling2D(pool_size=(4, 4), strides=(4, 4), name='pool4')(x)
+
+    # Reshape for GROs
+    x = Reshape((15, 128))(x)
 
     # GRU block 1, 2, output
     x = GRU(32, return_sequences=True, name='gru1')(x)
