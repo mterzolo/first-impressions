@@ -177,6 +177,7 @@ def audio2melspec(partition):
     audio_files = os.listdir('../data/audio_data/{}_data'.format(partition))
     audio_files = [i.split('.mp3')[0] for i in audio_files]
     y = [label_file['interview'][i + '.mp4'] for i in audio_files]
+    y = np.array(y)
 
     # Create empty array to store image data
     X = np.zeros(shape=(len(y), 96, 704, 1))
@@ -281,6 +282,7 @@ def extract_images(partition, num_frames):
                     break
 
                 logging.info('{}: {}: frame{}'.format(chunk, file_name, count))
+    pass
 
 
 def extract_audio(partition):
@@ -302,6 +304,8 @@ def extract_audio(partition):
             file_name = file_name.split('.mp4')[0]
 
             subprocess.call(['ffmpeg',
+                             '-y',
+                             '-i',
                              '../data/video_data/{}/{}.mp4'.format(chunk, file_name),
                              '../data/audio_data/{}_data/{}.mp3'.format(partition, file_name)])
     pass
@@ -315,7 +319,7 @@ def extract_text(partition):
     :return:
     """
 
-    logging.info('Begin Text Extraction')
+    logging.info('Begin text extraction for {} partition'.format(partition))
 
     # Open transcript and annotations
     with open('../data/meta_data/transcription_{}.pkl'.format(partition), 'rb') as f:

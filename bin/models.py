@@ -1,12 +1,11 @@
 import logging
 
 import keras
-from keras.layers import Embedding, Conv1D, MaxPooling1D
+from keras.layers import Embedding, Conv1D, Conv2D, MaxPooling1D
 from keras.applications import vgg16
 from keras.models import Model
 from keras.layers import Dense, Flatten, Dropout, Input, Reshape
 from keras.callbacks import ModelCheckpoint
-from keras.layers.convolutional import Convolution2D
 from keras.layers.convolutional import MaxPooling2D, ZeroPadding2D
 from keras.layers.normalization import BatchNormalization
 from keras.layers.advanced_activations import ELU
@@ -62,25 +61,25 @@ def audio_cnn_model():
     x = BatchNormalization(axis=time_axis, name='bn_0_freq')(x)
 
     # Conv block 1
-    x = Convolution2D(64, 3, 3, border_mode='same', name='conv1')(x)
-    x = BatchNormalization(axis=channel_axis, mode=0, name='bn1')(x)
+    x = Conv2D(64, 3, 3, border_mode='same', name='conv1')(x)
+    x = BatchNormalization(axis=channel_axis, name='bn1')(x)
     x = ELU()(x)
     x = MaxPooling2D(pool_size=(2, 2), strides=(2, 2), name='pool1')(x)
 
     # Conv block 2
-    x = Convolution2D(128, 3, 3, border_mode='same', name='conv2')(x)
-    x = BatchNormalization(axis=channel_axis, mode=0, name='bn2')(x)
+    x = Conv2D(128, 3, 3, border_mode='same', name='conv2')(x)
+    x = BatchNormalization(axis=channel_axis, name='bn2')(x)
     x = ELU()(x)
     x = MaxPooling2D(pool_size=(3, 3), strides=(3, 3), name='pool2')(x)
 
     # Conv block 3
-    x = Convolution2D(128, 3, 3, border_mode='same', name='conv3')(x)
-    x = BatchNormalization(axis=channel_axis, mode=0, name='bn3')(x)
+    x = Conv2D(128, 3, 3, border_mode='same', name='conv3')(x)
+    x = BatchNormalization(axis=channel_axis, name='bn3')(x)
     x = ELU()(x)
     x = MaxPooling2D(pool_size=(4, 4), strides=(4, 4), name='pool3')(x)
 
     # Conv block 4
-    x = Convolution2D(128, 3, 3, border_mode='same', name='conv4')(x)
+    x = Conv2D(128, 3, 3, border_mode='same', name='conv4')(x)
     x = BatchNormalization(axis=channel_axis, mode=0, name='bn4')(x)
     x = ELU()(x)
     x = MaxPooling2D(pool_size=(4, 4), strides=(4, 4), name='pool4')(x)
@@ -95,16 +94,14 @@ def audio_cnn_model():
     """
 
     # Final layer for predictions
+    x = Flatten()(x)
+    x = Dense(256, activation='relu')(x)
     x = Dense(256, activation='relu')(x)
     x = Dense(1, activation='linear')(x)
 
     # Create model
     model = Model(melgram_input, x)
-
-    # Fit model
-    filename = '../output/audio_model.h5'
-    checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
-    model.compile(optimizer='Adam', loss='mean_squared_error', callbacks=[checkpoint])
+    model.compile(optimizer='Adam', loss='mean_squared_error')
 
     return model
 

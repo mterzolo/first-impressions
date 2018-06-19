@@ -16,8 +16,8 @@ def main():
     logging.getLogger().setLevel(level=logging.INFO)
 
     #extract()
-    transform()
-    #model()
+    #transform()
+    model()
 
     pass
 
@@ -30,8 +30,8 @@ def extract():
     """
 
     # Download resources
-    resources.download_first_impressions()
-    resources.download_embedding()
+    #resources.download_first_impressions()
+    #resources.download_embedding()
 
     # Extract images, audio files, and text transcripts for each partition
     for partition in ['training', 'test', 'validation']:
@@ -46,7 +46,7 @@ def extract():
         lib.extract_text(partition)
 
     # Create word embeddings for text model
-    resources.create_embedding_matrix()
+    #resources.create_embedding_matrix()
 
     pass
 

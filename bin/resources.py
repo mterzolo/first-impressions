@@ -256,7 +256,7 @@ def create_embedding_matrix():
     with open('../resources/embedding_matrix.pkl', 'wb') as output:
         pickle.dump(embedding_matrix, output)
 
-    return embedding_matrix, word_to_index
+    pass
 
 def handle_funky_zip(file_chunk, auth):
     """
