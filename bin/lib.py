@@ -14,6 +14,7 @@ import yaml
 from keras.preprocessing.sequence import pad_sequences
 from gensim.utils import simple_preprocess
 from collections import defaultdict
+import resources
 
 # Global variables
 CONFS = None
@@ -331,6 +332,10 @@ def extract_text(partition):
     text_df = pd.DataFrame({'file': list(transcript.keys()),
                             'transcript': list(transcript.values())})
 
+    text_df['transcript'] = text_df['transcript'].fillna('UNK')
+    text_df['transcript'] = text_df['transcript'].astype(str)
+
+
     # Map in annotations
     text_df['interview_score'] = text_df['file'].map(annotation['interview'])
 
@@ -342,15 +347,11 @@ def extract_text(partition):
     text_df.to_csv('../data/text_data/{}_data/{}_transcripts.csv'.format(partition, partition), index=False)
 
 
-def transform_text(partition):
+def transform_text(partition, word_to_index):
 
     logging.info('Begin text transformation on {}'.format(partition))
 
-    # Load in embedding resources and transcripts
-    with open('../resources/embedding_matrix.pkl', 'rb') as f:
-        embedding_matrix = pickle.load(f, encoding='latin1')
-    with open('../resources/word_to_index.pkl', 'rb') as f:
-        word_to_index = pickle.load(f, encoding='latin1')
+    # Load transcripts
     observations = pd.read_csv('../data/text_data/{}_data/{}_transcripts.csv'.format(partition, partition))
 
     # Transform embedding resources
@@ -380,5 +381,95 @@ def transform_text(partition):
         pickle.dump(X, output, protocol=4)
     with open('../data/text_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
         pickle.dump(y, output, protocol=4)
+
+    pass
+
+
+def transform_audio(partition, n_mfcc):
+    """
+
+    compute features
+    :return:
+    """
+
+    logging.info('Begin audio transformations for {} partition'.format(partition))
+
+    # Open answers file
+    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
+        label_file = pickle.load(f, encoding='latin1')
+
+    # Get all IDs for videos for the training set
+    audio_files = os.listdir('../data/audio_data/{}_data'.format(partition))
+    audio_files = [i.split('.wav')[0] for i in audio_files]
+    y = [label_file['interview'][i + '.mp4'] for i in audio_files]
+    y = np.array(y)
+
+    # Create empty 2d array with place holders for all features
+    audio_matrix = np.empty((len(y), n_mfcc * 2 + 16))
+    counter = 0
+
+    for aud in audio_files:
+
+        logging.debug('Begin feature extraction for {}.wav'.format(aud))
+
+        # Convert wav to librosa object
+        y, sr = librosa.load('../data/audio_data/{}_data/{}.wav'.format(partition, aud))
+
+        # Set column names
+        mfcc_mean_cols = ['mfcc_mean_' + str(i) for i in range(n_mfcc)]
+        mfcc_std_cols = ['mfcc_mean_' + str(i) for i in range(n_mfcc)]
+        other_cols = [
+
+            'energey_mean',
+            'energy_std',
+            'zero_cross_mean',
+            'zero_cross_std',
+            'tempo_mean',
+            'tempo_std',
+            'flatness_mean',
+            'flatness_std',
+            'bandwidth_mean',
+            'bandwidth_std',
+            'rolloff_mean',
+            'rolloff_std',
+            'contrast_mean',
+            'contrast_std',
+            'tonnetz_mean',
+            'tonnetz_std'
+        ]
+        cols = mfcc_mean_cols + mfcc_std_cols + other_cols
+
+        # Create array to store values (Will become a row in the final df)
+        values = np.zeros((len(cols)))
+
+        # Extract features and store in the values array
+        values[0:n_mfcc] = librosa.feature.mfcc(y, n_mfcc=n_mfcc).mean(axis=1)
+        values[n_mfcc:n_mfcc * 2] = librosa.feature.mfcc(y, n_mfcc=n_mfcc).mean(axis=1)
+        values[n_mfcc * 2] = np.mean(librosa.feature.rmse(y))
+        values[n_mfcc * 2 + 1] = np.std(librosa.feature.rmse(y))
+        values[n_mfcc * 2 + 2] = np.mean(librosa.feature.zero_crossing_rate(y))
+        values[n_mfcc * 2 + 3] = np.std(librosa.feature.zero_crossing_rate(y))
+        values[n_mfcc * 2 + 4] = np.mean(librosa.feature.tempogram(y))
+        values[n_mfcc * 2 + 5] = np.std(librosa.feature.tempogram(y))
+        values[n_mfcc * 2 + 6] = np.mean(librosa.feature.spectral_flatness(y))
+        values[n_mfcc * 2 + 7] = np.std(librosa.feature.spectral_flatness(y))
+        values[n_mfcc * 2 + 8] = np.mean(librosa.feature.spectral_bandwidth(y))
+        values[n_mfcc * 2 + 9] = np.std(librosa.feature.spectral_bandwidth(y))
+        values[n_mfcc * 2 + 10] = np.mean(librosa.feature.spectral_rolloff(y))
+        values[n_mfcc * 2 + 11] = np.std(librosa.feature.spectral_rolloff(y))
+        values[n_mfcc * 2 + 12] = np.mean(librosa.feature.spectral_contrast(y))
+        values[n_mfcc * 2 + 13] = np.std(librosa.feature.spectral_contrast(y))
+        values[n_mfcc * 2 + 14] = np.mean(librosa.feature.tonnetz(y))
+        values[n_mfcc * 2 + 15] = np.std(librosa.feature.tonnetz(y))
+
+        # Append values to matrix
+        audio_matrix[counter] = values
+        counter += 1
+
+    # Create final dataframe
+    audio_df = pd.DataFrame(audio_matrix, columns=cols)
+    audio_df['interview_score'] = y
+
+    audio_df.to_csv('../data/audio_data/{}_data/{}_df.csv'.format(partition, partition), index=False)
 
     pass
