@@ -369,15 +369,14 @@ def transform_text(partition, word_to_index):
     observations['tokens'] = observations['transcript'].apply(simple_preprocess)
 
     # Convert tokens to indices
-    observations['indices'] = observations['tokens'].apply(lambda token_list: map(lambda token: word_to_index[token],
-                                                                                  token_list))
+    observations['indices'] = observations['tokens'].apply(lambda token_list: (lambda token: word_to_index[token],
+                                                                               token_list))
     observations['indices'] = observations['indices'].apply(lambda x: np.array(x))
 
     # Pad indices list with zeros, so that every article's list of indices is the same length
-    observations['padded_indices'] = pad_sequences(observations['indices'], 85)
+    X = pad_sequences(observations['indices'], 79)
 
     # Create data sets for model
-    X = observations['padded_indices'].values
     y = observations['interview_score'].values
 
     # Save as pickled files

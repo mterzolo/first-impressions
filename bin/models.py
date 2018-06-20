@@ -129,7 +129,7 @@ def text_cnn_model(embedding_matrix):
     embedding_output_dim = embedding_matrix.shape[1]
 
     # Maximum length of the x vectors
-    embedding_input_length = 85
+    embedding_input_length = 79
 
     logging.info('embedding_input_dim: {}, embedding_output_dim: {}, embedding_input_length: {}, '
                  'output_shape: {}'.format(embedding_input_dim, embedding_output_dim, embedding_input_length,
