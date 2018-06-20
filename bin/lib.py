@@ -333,7 +333,7 @@ def extract_text(partition):
                             'transcript': list(transcript.values())})
 
     text_df['transcript'] = text_df['transcript'].fillna('UNK')
-    text_df['transcript'] = text_df['transcript'].astype(str)
+    text_df['token'] = text_df['transcript'].str.replace(r'\[.*\]', '')
 
 
     # Map in annotations
@@ -346,13 +346,17 @@ def extract_text(partition):
     # Save into text data directory
     text_df.to_csv('../data/text_data/{}_data/{}_transcripts.csv'.format(partition, partition), index=False)
 
+    with open('../data/text_data/{}_data/{}_text_df.pkl'.format(partition, partition), 'wb') as output:
+        pickle.dump(text_df, output, protocol=4)
+
 
 def transform_text(partition, word_to_index):
 
     logging.info('Begin text transformation on {}'.format(partition))
 
     # Load transcripts
-    observations = pd.read_csv('../data/text_data/{}_data/{}_transcripts.csv'.format(partition, partition))
+    with open('../data/text_data/{}_data/{}_text_df.pkl'.format(partition, partition), 'rb') as f:
+        observations = pickle.load(f, encoding='latin1')
 
     # Transform embedding resources
     default_dict_instance = defaultdict(lambda: word_to_index['UNK'])
