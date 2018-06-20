@@ -98,7 +98,7 @@ def download_first_impressions():
 
             # Unzip file chunks from main download blocks
             subprocess.call(['unzip',
-                             #'-n',
+                             '-n',
                              '-P',
                              encryption_key,
                              '../resources/compressed/{}'.format(file_tree[file_chunk]),
@@ -128,6 +128,7 @@ def download_first_impressions():
                                      '../data/video_data/{}/'.format(to_extract.split('.zip')[0])])
 
                 subprocess.call(['unzip',
+                                 '-n',
                                  '-P',
                                  auth,
                                  '../data/video_data/{}'.format(to_extract),
@@ -242,7 +243,6 @@ def create_embedding_matrix():
     # Get word weights from file via gensim
     model = gensim.models.KeyedVectors.load_word2vec_format(get_conf('embedding_path'), binary=True)
     embedding_matrix = model.syn0
-
     # Filter out words with index not in w2v range
     word_to_index = dict([(k, v.index) for k, v in model.vocab.items()])
 
@@ -250,13 +250,8 @@ def create_embedding_matrix():
     logging.info('Created word to index lookup, with min index: {}, max index: {}'.format(min(word_to_index.values()),
                                                                                           max(word_to_index.values())))
 
-    # Save as pickled files
-    with open('../resources/word_to_index.pkl', 'wb') as output:
-        pickle.dump(word_to_index, output)
-    with open('../resources/embedding_matrix.pkl', 'wb') as output:
-        pickle.dump(embedding_matrix, output)
+    return embedding_matrix, word_to_index
 
-    pass
 
 def handle_funky_zip(file_chunk, auth):
     """
