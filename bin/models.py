@@ -1,6 +1,7 @@
 import logging
-
+import resources
 import keras
+import pandas as pd
 from keras.layers import Embedding, Conv1D, Conv2D, MaxPooling1D
 from keras.applications import vgg16
 from keras.models import Model
@@ -106,7 +107,7 @@ def audio_cnn_model():
     return model
 
 
-def text_cnn_model(transcripts, embedding_matrix, word_to_index):
+def text_cnn_model(embedding_matrix):
     """
     Generate a convolutional neural network model, with an embedding layer.
     :param transcripts: A Pandas DataFrame containing the field padded_indices
@@ -128,7 +129,7 @@ def text_cnn_model(transcripts, embedding_matrix, word_to_index):
     embedding_output_dim = embedding_matrix.shape[1]
 
     # Maximum length of the x vectors
-    embedding_input_length = max(transcripts['padded_indices'].apply(len))
+    embedding_input_length = 85
 
     logging.info('embedding_input_dim: {}, embedding_output_dim: {}, embedding_input_length: {}, '
                  'output_shape: {}'.format(embedding_input_dim, embedding_output_dim, embedding_input_length,
