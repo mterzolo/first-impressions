@@ -12,6 +12,7 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.advanced_activations import ELU
 from keras.layers.recurrent import GRU
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import GridSearchCV
 
 
 def image_cnn_model():
@@ -162,6 +163,13 @@ def text_cnn_model(embedding_matrix):
 
 def audio_rand_forest():
 
-    model = RandomForestRegressor()
+    model = GridSearchCV(RandomForestRegressor(),
+                         param_grid={'max_features': range(5, 30, 5),
+                                     'max_depth': range(3, 7, 2),
+                                     'n_estimators': range(60, 120, 15),
+                                     'criterion': ['mse', 'mae'],
+                                     },
+                         scoring='neg_mean_squared_error',
+                         cv=3)
 
     return model

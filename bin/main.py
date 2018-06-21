@@ -4,6 +4,7 @@ import models
 import lib
 import resources
 from keras.callbacks import ModelCheckpoint
+import pandas as pd
 
 
 def main():
@@ -16,8 +17,8 @@ def main():
     logging.getLogger().setLevel(level=logging.DEBUG)
 
     #extract()
-    transform()
-    #model()
+    #transform()
+    model()
 
     pass
 
@@ -71,8 +72,6 @@ def transform():
 
 def model(image=False, audio=True, text=False):
 
-    embedding_matrix, word_to_index = resources.create_embedding_matrix()
-
     if image:
 
         # Load data
@@ -96,25 +95,28 @@ def model(image=False, audio=True, text=False):
 
     if audio:
 
-        # Load data
-        with open('../data/audio_data/pickle_files/X_training.pkl', 'rb') as file:
-            X_train = pickle.load(file)
-        with open('../data/audio_data/pickle_files/y_training.pkl', 'rb') as file:
-            y_train = pickle.load(file)
-        with open('../data/audio_data/pickle_files/X_test.pkl', 'rb') as file:
-            X_test = pickle.load(file)
-        with open('../data/audio_data/pickle_files/y_test.pkl', 'rb') as file:
-            y_test = pickle.load(file)
+        training_set = pd.read_csv('../data/audio_data/pickle_files/training_df.csv')
+        test_set = pd.read_csv('../data/audio_data/pickle_files/test_df.csv')
 
-        # Create model object and fit
-        audio_model = models.audio_cnn_model()
-        filename = '../output/audio_model.h5'
-        checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
-        audio_model.fit(X_train, y_train,
-                        batch_size=32, epochs=100,
-                        validation_data=(X_test, y_test),
-                        callbacks=[checkpoint])
+        all_data = pd.concat((training_set, test_set), axis=0)
+        X_all = all_data.drop('interview_score', axis=1)
+        y_all = all_data['interview_score']
+
+        logging.info('Start training audio model')
+
+        audio_model = models.audio_rand_forest()
+        audio_model.fit(X_all, y_all)
+
+        logging.info(audio_model.best_params_)
+        logging.info('Hold out score on best estimator: {}'.format(max(audio_model.cv_results_['mean_test_score'])))
+
+        with open('../output/audio_model.pkl', 'wb') as fid:
+            pickle.dump(audio_model, fid)
+
+
     if text:
+
+        embedding_matrix, word_to_index = resources.create_embedding_matrix()
 
         # Load data
         with open('../data/text_data/pickle_files/X_training.pkl', 'rb') as file:
