@@ -50,7 +50,7 @@ def extract():
 
 def transform():
 
-    embedding_matrix, word_to_index = resources.create_embedding_matrix()
+    #embedding_matrix, word_to_index = resources.create_embedding_matrix()
 
     for partition in ['training', 'test', 'validation']:
 
@@ -64,7 +64,7 @@ def transform():
         #lib.img2array(partition=partition, frame_num=4)
 
         # Transform text to tokens
-        lib.transform_text(partition=partition, word_to_index=word_to_index)
+        #lib.transform_text(partition=partition, word_to_index=word_to_index)
 
     pass
 

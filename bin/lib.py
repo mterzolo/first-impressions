@@ -368,8 +368,8 @@ def transform_text(partition, word_to_index):
     observations['tokens'] = observations['transcript'].apply(simple_preprocess)
 
     # Convert tokens to indices
-    observations['indices'] = observations['tokens'].apply(lambda token_list: list((lambda token: word_to_index[token],
-                                                                               token_list)))
+    observations['indices'] = observations['tokens'].apply(lambda token_list: list(map(lambda token: word_to_index[token],
+                                                                                       token_list)))
     observations['indices'] = observations['indices'].apply(lambda x: np.array(x))
 
     # Pad indices list with zeros, so that every article's list of indices is the same length
@@ -444,6 +444,36 @@ def transform_audio(partition, n_mfcc):
         # Create array to store values (Will become a row in the final df)
         values = np.zeros((len(cols)))
 
+        mfcc = librosa.feature.mfcc(y, n_mfcc=n_mfcc)
+        energy = librosa.feature.rmse(y)
+        zero_cross = librosa.feature.zero_crossing_rate(y)
+        tempo = librosa.feature.tempogram(y)
+        flatness = librosa.feature.spectral_flatness(y)
+        bandwidth = librosa.feature.spectral_bandwidth(y)
+        rolloff = librosa.feature.spectral_rolloff(y)
+        contrast = librosa.feature.spectral_contrast(y)
+        tonnetz = librosa.feature.tonnetz(y)
+
+        values[0:n_mfcc] = mfcc.mean(axis=1)
+        values[n_mfcc:n_mfcc * 2] = mfcc.std(axis=1)
+        values[n_mfcc * 2] = np.mean(energy)
+        values[n_mfcc * 2 + 1] = np.std(energy)
+        values[n_mfcc * 2 + 2] = np.mean(zero_cross)
+        values[n_mfcc * 2 + 3] = np.std(zero_cross)
+        values[n_mfcc * 2 + 4] = np.mean(tempo)
+        values[n_mfcc * 2 + 5] = np.std(tempo)
+        values[n_mfcc * 2 + 6] = np.mean(flatness)
+        values[n_mfcc * 2 + 7] = np.std(flatness)
+        values[n_mfcc * 2 + 8] = np.mean(bandwidth)
+        values[n_mfcc * 2 + 9] = np.std(bandwidth)
+        values[n_mfcc * 2 + 10] = np.mean(rolloff)
+        values[n_mfcc * 2 + 11] = np.std(rolloff)
+        values[n_mfcc * 2 + 12] = np.mean(contrast)
+        values[n_mfcc * 2 + 13] = np.std(contrast)
+        values[n_mfcc * 2 + 14] = np.mean(tonnetz)
+        values[n_mfcc * 2 + 15] = np.std(tonnetz)
+
+        """
         # Extract features and store in the values array
         values[0:n_mfcc] = librosa.feature.mfcc(y, n_mfcc=n_mfcc).mean(axis=1)
         values[n_mfcc:n_mfcc * 2] = librosa.feature.mfcc(y, n_mfcc=n_mfcc).mean(axis=1)
@@ -463,6 +493,7 @@ def transform_audio(partition, n_mfcc):
         values[n_mfcc * 2 + 13] = np.std(librosa.feature.spectral_contrast(y))
         values[n_mfcc * 2 + 14] = np.mean(librosa.feature.tonnetz(y))
         values[n_mfcc * 2 + 15] = np.std(librosa.feature.tonnetz(y))
+        """
 
         # Append values to matrix
         audio_matrix[counter] = values
