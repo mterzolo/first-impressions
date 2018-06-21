@@ -214,7 +214,6 @@ def audio_rand_forest():
                          param_grid={'max_features': range(5, 30, 5),
                                      'max_depth': range(3, 7, 2),
                                      'n_estimators': range(60, 120, 15),
-                                     'criterion': ['mse', 'mae'],
                                      },
                          scoring='neg_mean_squared_error',
                          cv=3)
