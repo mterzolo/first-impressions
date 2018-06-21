@@ -45,9 +45,6 @@ def extract():
         # Take text from transcripts
         lib.extract_text(partition)
 
-    # Create word embeddings for text model
-    resources.create_embedding_matrix()
-
     pass
 
 
@@ -60,11 +57,8 @@ def transform():
         # Transform raw audio to melspectrograms
         #lib.audio2melspec(partition=partition)
 
-        # Strip audio from mp4 and save in separate directory
-        lib.transform_audio(partition, n_mfcc=13)
-
         # Transform raw audio to feature matrix
-        #lib.transform_audio(partition=partition, n_mfcc=13)
+        lib.transform_audio(partition=partition, n_mfcc=13)
 
         # Transform raw jpegs into numpy arrays
         #lib.img2array(partition=partition, frame_num=4)
@@ -123,13 +117,13 @@ def model(image=False, audio=True, text=False):
     if text:
 
         # Load data
-        with open('../data/audio_data/pickle_files/X_training.pkl', 'rb') as file:
+        with open('../data/text_data/pickle_files/X_training.pkl', 'rb') as file:
             X_train = pickle.load(file)
-        with open('../data/audio_data/pickle_files/y_training.pkl', 'rb') as file:
+        with open('../data/text_data/pickle_files/y_training.pkl', 'rb') as file:
             y_train = pickle.load(file)
-        with open('../data/audio_data/pickle_files/X_test.pkl', 'rb') as file:
+        with open('../data/text_data/pickle_files/X_test.pkl', 'rb') as file:
             X_test = pickle.load(file)
-        with open('../data/audio_data/pickle_files/y_test.pkl', 'rb') as file:
+        with open('../data/text_data/pickle_files/y_test.pkl', 'rb') as file:
             y_test = pickle.load(file)
 
         # Create model object and fit

@@ -335,7 +335,6 @@ def extract_text(partition):
     text_df['transcript'] = text_df['transcript'].fillna('UNK')
     text_df['token'] = text_df['transcript'].str.replace(r'\[.*\]', '')
 
-
     # Map in annotations
     text_df['interview_score'] = text_df['file'].map(annotation['interview'])
 
@@ -369,8 +368,8 @@ def transform_text(partition, word_to_index):
     observations['tokens'] = observations['transcript'].apply(simple_preprocess)
 
     # Convert tokens to indices
-    observations['indices'] = observations['tokens'].apply(lambda token_list: (lambda token: word_to_index[token],
-                                                                               token_list))
+    observations['indices'] = observations['tokens'].apply(lambda token_list: list((lambda token: word_to_index[token],
+                                                                               token_list)))
     observations['indices'] = observations['indices'].apply(lambda x: np.array(x))
 
     # Pad indices list with zeros, so that every article's list of indices is the same length
@@ -404,11 +403,35 @@ def transform_audio(partition, n_mfcc):
     # Get all IDs for videos for the training set
     audio_files = os.listdir('../data/audio_data/{}_data'.format(partition))
     audio_files = [i.split('.wav')[0] for i in audio_files]
-    y = [label_file['interview'][i + '.mp4'] for i in audio_files]
-    y = np.array(y)
+    score = [label_file['interview'][i + '.mp4'] for i in audio_files]
+    score = np.array(score)
+
+    # Set column names
+    mfcc_mean_cols = ['mfcc_mean_' + str(i) for i in range(n_mfcc)]
+    mfcc_std_cols = ['mfcc_mean_' + str(i) for i in range(n_mfcc)]
+    other_cols = [
+
+        'energey_mean',
+        'energy_std',
+        'zero_cross_mean',
+        'zero_cross_std',
+        'tempo_mean',
+        'tempo_std',
+        'flatness_mean',
+        'flatness_std',
+        'bandwidth_mean',
+        'bandwidth_std',
+        'rolloff_mean',
+        'rolloff_std',
+        'contrast_mean',
+        'contrast_std',
+        'tonnetz_mean',
+        'tonnetz_std'
+    ]
+    cols = mfcc_mean_cols + mfcc_std_cols + other_cols
 
     # Create empty 2d array with place holders for all features
-    audio_matrix = np.empty((len(y), n_mfcc * 2 + 16))
+    audio_matrix = np.empty((len(score), n_mfcc * 2 + 16))
     counter = 0
 
     for aud in audio_files:
@@ -417,30 +440,6 @@ def transform_audio(partition, n_mfcc):
 
         # Convert wav to librosa object
         y, sr = librosa.load('../data/audio_data/{}_data/{}.wav'.format(partition, aud))
-
-        # Set column names
-        mfcc_mean_cols = ['mfcc_mean_' + str(i) for i in range(n_mfcc)]
-        mfcc_std_cols = ['mfcc_mean_' + str(i) for i in range(n_mfcc)]
-        other_cols = [
-
-            'energey_mean',
-            'energy_std',
-            'zero_cross_mean',
-            'zero_cross_std',
-            'tempo_mean',
-            'tempo_std',
-            'flatness_mean',
-            'flatness_std',
-            'bandwidth_mean',
-            'bandwidth_std',
-            'rolloff_mean',
-            'rolloff_std',
-            'contrast_mean',
-            'contrast_std',
-            'tonnetz_mean',
-            'tonnetz_std'
-        ]
-        cols = mfcc_mean_cols + mfcc_std_cols + other_cols
 
         # Create array to store values (Will become a row in the final df)
         values = np.zeros((len(cols)))
@@ -471,8 +470,8 @@ def transform_audio(partition, n_mfcc):
 
     # Create final dataframe
     audio_df = pd.DataFrame(audio_matrix, columns=cols)
-    audio_df['interview_score'] = y
+    audio_df['interview_score'] = score
 
-    audio_df.to_csv('../data/audio_data/{}_data/{}_df.csv'.format(partition, partition), index=False)
+    audio_df.to_csv('../data/audio_data/pickle_files/{}_df.csv'.format(partition, partition), index=False)
 
     pass
