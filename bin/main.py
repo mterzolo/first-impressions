@@ -108,11 +108,11 @@ def model(image=False, audio=True, text=False):
         audio_model.fit(X_all, y_all)
 
         logging.info(audio_model.best_params_)
-        logging.info('Hold out score on best estimator: {}'.format(max(audio_model.cv_results_['mean_test_score'])))
+        logging.info('Train score with best estimator: {}'.format(max(audio_model.cv_results_['mean_train_score'])))
+        logging.info('Test score with best estimator: {}'.format(max(audio_model.cv_results_['mean_test_score'])))
 
         with open('../output/audio_model.pkl', 'wb') as fid:
             pickle.dump(audio_model, fid)
-
 
     if text:
 
@@ -137,12 +137,17 @@ def model(image=False, audio=True, text=False):
                        validation_data=(X_test, y_test),
                        callbacks=[checkpoint])
 
-        pass
+    pass
 
 
+def validate():
 
     pass
 
+
+def score_new_vid():
+
+    pass
 
 # Main section
 if __name__ == '__main__':
