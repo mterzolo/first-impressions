@@ -11,6 +11,7 @@ from keras.layers.convolutional import MaxPooling2D, ZeroPadding2D
 from keras.layers.normalization import BatchNormalization
 from keras.layers.advanced_activations import ELU
 from keras.layers.recurrent import GRU
+from sklearn.ensemble import RandomForestRegressor
 
 
 def image_cnn_model():
@@ -131,9 +132,8 @@ def text_cnn_model(embedding_matrix):
     # Maximum length of the x vectors
     embedding_input_length = 79
 
-    logging.info('embedding_input_dim: {}, embedding_output_dim: {}, embedding_input_length: {}, '
-                 'output_shape: {}'.format(embedding_input_dim, embedding_output_dim, embedding_input_length,
-                                           output_shape))
+    logging.info('embedding_input_dim: {}, embedding_output_dim: {}, embedding_input_length: {}'
+                 .format(embedding_input_dim, embedding_output_dim, embedding_input_length))
 
     # Create embedding layer
     embedding_layer = Embedding(input_dim=embedding_input_dim,
@@ -158,3 +158,10 @@ def text_cnn_model(embedding_matrix):
     text_model.compile(loss='mse', optimizer='rmsprop')
 
     return text_model
+
+
+def audio_rand_forest():
+
+    model = RandomForestRegressor()
+
+    return model
