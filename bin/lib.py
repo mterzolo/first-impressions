@@ -373,7 +373,7 @@ def transform_text(partition, word_to_index):
     observations['indices'] = observations['indices'].apply(lambda x: np.array(x))
 
     # Pad indices list with zeros, so that every article's list of indices is the same length
-    X = pad_sequences(observations['indices'], 79)
+    X = pad_sequences(observations['indices'], 80)
 
     # Create data sets for model
     y = observations['interview_score'].values
