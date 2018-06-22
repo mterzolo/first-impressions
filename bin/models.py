@@ -18,9 +18,9 @@ def image_cnn_model():
     # Create additional layers
     x = Flatten()(x)
     x = Dense(512, activation='relu')(x)
-    x = Dropout(.45)(x)
+    x = Dropout(.2)(x)
     x = Dense(512, activation='relu')(x)
-    x = Dropout(.45)(x)
+    x = Dropout(.2)(x)
     preds = Dense(1, activation='linear')(x)
 
     # Freeze all original layers

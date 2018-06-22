@@ -91,7 +91,7 @@ def model(image=True, audio=False, text=False):
         checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         image_model.fit(X_train, y_train,
                         validation_data=(X_test, y_test),
-                        batch_size=64, epochs=125,
+                        batch_size=64, epochs=100,
                         callbacks=[checkpoint],
                         shuffle=True)
 
@@ -159,32 +159,45 @@ def ensemble():
         X_img_train = pickle.load(file)
     with open('../data/image_data/pickle_files/X_test.pkl', 'rb') as file:
         X_img_test = pickle.load(file)
+    with open('../data/image_data/pickle_files/X_validation.pkl', 'rb') as file:
+        X_img_val = pickle.load(file)
     with open('../data/image_data/pickle_files/y_training.pkl', 'rb') as file:
         y_img_train = pickle.load(file)
     with open('../data/image_data/pickle_files/y_test.pkl', 'rb') as file:
         y_img_test = pickle.load(file)
+    with open('../data/image_data/pickle_files/y_validation.pkl', 'rb') as file:
+        y_img_val = pickle.load(file)
     with open('../data/image_data/pickle_files/vid_ids_training.pkl', 'rb') as file:
         id_img_train = pickle.load(file)
     with open('../data/image_data/pickle_files/vid_ids_test.pkl', 'rb') as file:
         id_img_test = pickle.load(file)
+    with open('../data/image_data/pickle_files/vid_ids_validation.pkl', 'rb') as file:
+        id_img_val = pickle.load(file)
 
     # Load audio data
     aud_train = pd.read_csv('../data/audio_data/pickle_files/training_df.csv')
     aud_test = pd.read_csv('../data/audio_data/pickle_files/test_df.csv')
+    aud_val = pd.read_csv('../data/audio_data/pickle_files/validation_df.csv')
     X_aud_train = aud_train.drop(['interview_score', 'video_id'], axis=1)
     id_aud_train = aud_train['video_id']
     X_aud_test = aud_test.drop(['interview_score', 'video_id'], axis=1)
     id_aud_test = aud_test['video_id']
+    X_aud_val = aud_val.drop(['interview_score', 'video_id'], axis=1)
+    id_aud_val = aud_val['video_id']
 
     # Load text data
     with open('../data/text_data/pickle_files/X_training.pkl', 'rb') as file:
         X_text_train = pickle.load(file)
     with open('../data/text_data/pickle_files/X_test.pkl', 'rb') as file:
         X_text_test = pickle.load(file)
+    with open('../data/text_data/pickle_files/X_validation.pkl', 'rb') as file:
+        X_text_val = pickle.load(file)
     with open('../data/text_data/pickle_files/vid_ids_training.pkl', 'rb') as file:
         id_text_train = pickle.load(file)
     with open('../data/text_data/pickle_files/vid_ids_test.pkl', 'rb') as file:
         id_text_test = pickle.load(file)
+    with open('../data/text_data/pickle_files/vid_ids_validation.pkl', 'rb') as file:
+        id_text_val = pickle.load(file)
 
     logging.info('Getting predictions for all 3 models')
 
@@ -195,14 +208,21 @@ def ensemble():
     img_test_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict(X_img_test)],
                                 'video_ids': id_img_test,
                                 'interview_score':y_img_test})
+    img_val_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict(X_img_val)],
+                                'video_ids': id_img_val,
+                                'interview_score': y_img_val})
     aud_train_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_train),
                                  'video_ids': id_aud_train})
     aud_test_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_test),
                                 'video_ids': id_aud_test})
+    aud_val_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_val),
+                                'video_ids': id_aud_val})
     text_train_df = pd.DataFrame({'text_preds': [i[0] for i in text_model.predict(X_text_train)],
                                   'video_ids': id_text_train})
     text_test_df = pd.DataFrame({'text_preds': [i[0] for i in text_model.predict(X_text_test)],
                                  'video_ids': id_text_test})
+    text_val_df = pd.DataFrame({'text_preds': [i[0] for i in text_model.predict(X_text_val)],
+                                 'video_ids': id_text_val})
 
     logging.info('Merge predictions together into single data frame')
 
@@ -211,12 +231,16 @@ def ensemble():
     train_preds = train_preds.merge(text_train_df, on='video_ids')
     test_preds = img_test_df.merge(aud_test_df, on='video_ids')
     test_preds = test_preds.merge(text_test_df, on='video_ids')
+    val_preds = img_val_df.merge(aud_val_df, on='video_ids')
+    val_preds = val_preds.merge(text_val_df, on='video_ids')
 
     # Split target variable and features
     X_train = train_preds[['img_preds', 'aud_preds', 'text_preds']]
     y_train = train_preds[['interview_score']]
     X_test = test_preds[['img_preds', 'aud_preds', 'text_preds']]
     y_test = test_preds[['interview_score']]
+    X_val = val_preds[['img_preds', 'aud_preds', 'text_preds']]
+    y_val = val_preds[['interview_score']]
 
     logging.info('Build OLS model to combine model outputs')
 
@@ -227,15 +251,19 @@ def ensemble():
     # Score model
     train_score = mean_squared_error(y_train, ols_model.predict(X_train))
     test_score = mean_squared_error(y_test, ols_model.predict(X_test))
+    val_score = mean_squared_error(y_val, ols_model.predict(X_val))
 
     # Simple Average
     simp_train_score = mean_squared_error(y_train, X_train.mean(axis=1))
     simp_test_score = mean_squared_error(y_test, X_test.mean(axis=1))
+    simp_val_score = mean_squared_error(y_val, X_val.mean(axis=1))
 
     logging.info('OLS Score on training set: {}'.format(train_score))
     logging.info('OLS Score on test set: {}'.format(test_score))
+    logging.info('OLS Score on val set: {}'.format(val_score))
     logging.info('Simple Average Score on training set: {}'.format(simp_train_score))
     logging.info('Simple Average Score on test set: {}'.format(simp_test_score))
+    logging.info('Simple Average Score on val set: {}'.format(simp_val_score))
 
     # Save model
     with open('../output/ensemble_model.pkl', 'wb') as fid:
