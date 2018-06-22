@@ -22,9 +22,9 @@ def image_cnn_model():
 
     # Create additional layers
     x = Flatten()(x)
-    x = Dense(512, activation='relu')(x)
+    x = Dense(1026, activation='relu')(x)
     x = Dropout(.45)(x)
-    x = Dense(256, activation='relu')(x)
+    x = Dense(1026, activation='relu')(x)
     x = Dropout(.45)(x)
     preds = Dense(1, activation='linear')(x)
 
@@ -85,7 +85,7 @@ def text_lstm_model(embedding_matrix):
     x = Bidirectional(LSTM(64))(x)
     x = Dropout(.5)(x)
     x = Dense(units=64, activation='relu')(x)
-    x = Dense(.5)(x)
+    x = Dropout(.5)(x)
     preds = Dense(units=1, activation='linear')(x)
 
     # Compile architecture
