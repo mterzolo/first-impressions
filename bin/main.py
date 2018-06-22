@@ -131,7 +131,7 @@ def model(image=True, audio=False, text=True):
             y_test = pickle.load(file)
 
         # Create model object and fit
-        text_model = models.text_cnn_model(embedding_matrix=embedding_matrix)
+        text_model = models.text_lstm_model(embedding_matrix=embedding_matrix)
         filename = '../output/text_model.h5'
         checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         text_model.fit(X_train, y_train,

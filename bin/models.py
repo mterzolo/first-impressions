@@ -1,15 +1,10 @@
 import logging
 import resources
 import keras
-import pandas as pd
-from keras.layers import Embedding, Conv1D, Conv2D, MaxPooling1D
 from keras.applications import vgg16
 from keras.models import Model
-from keras.layers import Dense, Flatten, Dropout, Input, LSTM, Bidirectional
+from keras.layers import Dense, Flatten, Dropout, LSTM, Bidirectional, Embedding
 from keras.callbacks import ModelCheckpoint
-from keras.layers.convolutional import MaxPooling2D, ZeroPadding2D
-from keras.layers.normalization import BatchNormalization
-from keras.layers.advanced_activations import ELU
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 
@@ -22,9 +17,9 @@ def image_cnn_model():
 
     # Create additional layers
     x = Flatten()(x)
-    x = Dense(1026, activation='relu')(x)
+    x = Dense(512, activation='relu')(x)
     x = Dropout(.45)(x)
-    x = Dense(1026, activation='relu')(x)
+    x = Dense(512, activation='relu')(x)
     x = Dropout(.45)(x)
     preds = Dense(1, activation='linear')(x)
 
@@ -34,10 +29,6 @@ def image_cnn_model():
 
     # Optimizer
     optimizer = keras.optimizers.Adam(lr=0.001, decay=0.0006)
-
-    # fit model
-    filename = '../output/image_model.h5'
-    checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
 
     # Create the model
     model = Model(base_model.input, preds)
