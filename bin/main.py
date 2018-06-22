@@ -71,7 +71,7 @@ def transform():
     pass
 
 
-def model(image=True, audio=False, text=True):
+def model(image=True, audio=False, text=False):
 
     if image:
 
@@ -91,7 +91,7 @@ def model(image=True, audio=False, text=True):
         checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         image_model.fit(X_train, y_train,
                         validation_data=(X_test, y_test),
-                        batch_size=32, epochs=125,
+                        batch_size=64, epochs=125,
                         callbacks=[checkpoint],
                         shuffle=True)
 
@@ -135,7 +135,7 @@ def model(image=True, audio=False, text=True):
         filename = '../output/text_model.h5'
         checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         text_model.fit(X_train, y_train,
-                       batch_size=32, epochs=75,
+                       batch_size=32, epochs=55,
                        validation_data=(X_test, y_test),
                        callbacks=[checkpoint],
                        shuffle=True)
