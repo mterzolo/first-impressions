@@ -228,8 +228,14 @@ def ensemble():
     train_score = mean_squared_error(y_train, ols_model.predict(X_train))
     test_score = mean_squared_error(y_test, ols_model.predict(X_test))
 
-    logging.info('Score on training set: {}'.format(train_score))
-    logging.info('Score on test set: {}'.format(test_score))
+    # Simple Average
+    simp_train_score = mean_squared_error(y_train, X_train.mean(axis=1))
+    simp_test_score = mean_squared_error(y_test, X_test.mean(axis=1))
+
+    logging.info('OLS Score on training set: {}'.format(train_score))
+    logging.info('OLS Score on test set: {}'.format(test_score))
+    logging.info('Simple Average Score on training set: {}'.format(simp_train_score))
+    logging.info('Simple Average Score on test set: {}'.format(simp_test_score))
 
     # Save model
     with open('../output/ensemble_model.pkl', 'wb') as fid:
