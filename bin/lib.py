@@ -62,170 +62,6 @@ def get_conf(conf_name):
     return load_confs()[conf_name]
 
 
-def get_batch_name():
-    """
-    Get the name of the current run. This is a unique identifier for each run of this application
-    :return: The name of the current run. This is a unique identifier for each run of this application
-    :rtype: str
-    """
-    global BATCH_NAME
-
-    if BATCH_NAME is None:
-        logging.info('Batch name not yet set. Setting batch name.')
-        BATCH_NAME = str(datetime.datetime.utcnow()).replace(' ', '_').replace('/', '_').replace(':', '_')
-        logging.info('Batch name: {}'.format(BATCH_NAME))
-    return BATCH_NAME
-
-
-def img2array(partition, frame_num):
-
-    logging.info('Begin image transformations for {} partition'.format(partition))
-
-    # Open answers file
-    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
-        label_file = pickle.load(f, encoding='latin1')
-
-    # Get all IDs for videos for the training set
-    vid_ids = os.listdir('../data/image_data/{}_data'.format(partition))
-    y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
-
-    # Create empty array to store image data
-    X = np.empty(shape=(len(y), 224, 224, 3))
-    counter = 0
-
-    for video in vid_ids:
-
-        # Load the image
-        filename = '../data/image_data/{}_data/{}/frame{}.jpg'.format(partition, video, frame_num)
-        original = load_img(filename, target_size=(224, 224))
-
-        # Convert to numpy array
-        numpy_image = img_to_array(original)
-
-        # Resize and store in one big array
-        image_temp = np.expand_dims(numpy_image, axis=0)
-        image_temp = vgg16.preprocess_input(image_temp)
-        X[counter] = image_temp
-        counter += 1
-
-    # Save arrays as pickled files
-    with open('../data/image_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(X, output, protocol=4)
-    with open('../data/image_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(y, output, protocol=4)
-
-    pass
-
-
-def img2array3D(data_split, num_samples, num_frames):
-
-    # Open answers file
-    with open('../data/meta_data/annotation_{}.pkl'.format(data_split), 'rb') as f:
-        label_file = pickle.load(f, encoding='latin1')
-
-    # Get all IDs for videos for the training set
-    vid_ids = os.listdir('../data/image_data/{}_data'.format(data_split))[0:num_samples]
-    y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
-
-    # Create empty array to store image data
-    X = np.empty(shape=(num_samples, num_frames, 224, 224, 3))
-    out_counter = 0
-
-    for video in vid_ids:
-
-        images = os.listdir('../data/image_data/{}_data/{}'.format(data_split, video))
-        X_temp = np.zeros(shape=(num_frames, 224, 224, 3))
-        in_counter = 0
-
-        for image in images:
-
-            # Load the image
-            original = load_img('../data/image_data/{}_data/{}/{}'.format(data_split, video, image),
-                                target_size=(224, 224))
-
-            # Convert to numpy array
-            numpy_image = img_to_array(original)
-
-            # Resize and store in one big array
-            image_temp = np.expand_dims(numpy_image, axis=0)
-            image_temp = vgg16.preprocess_input(image_temp)
-            X_temp[in_counter] = image_temp
-
-            # Increment counter for number of images in observation
-            in_counter += 1
-
-        X_temp = np.expand_dims(X_temp, axis=0)
-        X[out_counter] = X_temp
-
-        # Increment counter for observations in dataset
-        out_counter += 1
-
-    return X, y
-
-
-def audio2melspec(partition):
-    """
-    Reads an audio file and outputs a Mel-spectrogram.
-    """
-
-    logging.info('Begin audio transformations for {} partition'.format(partition))
-
-    # Open answers file
-    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
-        label_file = pickle.load(f, encoding='latin1')
-
-    # Get all IDs for videos for the training set
-    audio_files = os.listdir('../data/audio_data/{}_data'.format(partition))
-    audio_files = [i.split('.wav')[0] for i in audio_files]
-    y = [label_file['interview'][i + '.mp4'] for i in audio_files]
-    y = np.array(y)
-
-    # Create empty array to store image data
-    X = np.zeros(shape=(len(y), 96, 704, 1))
-    counter = 0
-
-    for audio in audio_files:
-
-        logging.debug('Transforming partition: {} file: {}'.format(partition, audio))
-
-        # Mel-spectrogram parameters
-        SR = 12000
-        N_FFT = 512
-        N_MELS = 96
-        HOP_LEN = 256
-        DURA = 15
-
-        # Load audio file
-        src, sr = librosa.load('../data/audio_data/{}_data/{}.wav'.format(partition, audio), sr=SR)
-        n_sample = src.shape[0]
-        n_sample_wanted = int(DURA * SR)
-
-        # Trim the signal at the center
-        if n_sample < n_sample_wanted:  # if too short
-            src = np.hstack((src, np.zeros((int(DURA * SR) - n_sample,))))
-        elif n_sample > n_sample_wanted:  # if too long
-            src = src[(n_sample - n_sample_wanted) // 2:
-                      (n_sample + n_sample_wanted) // 2]
-
-        # Convert to log scaled mel-spec
-        logam = librosa.core.power_to_db
-        melgram = librosa.feature.melspectrogram
-        logmelspec = logam(melgram(y=src, sr=SR, hop_length=HOP_LEN,
-                                   n_fft=N_FFT, n_mels=N_MELS) ** 2, ref=1.0)
-        logmelspec = np.expand_dims(logmelspec, axis=3)
-        X[counter] = logmelspec
-
-    logging.info('{} audio transformation complete, saving to file'.format(partition))
-
-    # Save arrays as pickled files
-    with open('../data/audio_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(X, output, protocol=4)
-    with open('../data/audio_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(y, output, protocol=4)
-
-    pass
-
-
 def extract_images(partition, num_frames):
 
     logging.info('Begin image extraction on {} partition'.format(partition))
@@ -329,14 +165,14 @@ def extract_text(partition):
         annotation = pickle.load(f, encoding='latin1')
 
     # Transform into a data frame
-    text_df = pd.DataFrame({'file': list(transcript.keys()),
+    text_df = pd.DataFrame({'video_id': list(transcript.keys()),
                             'transcript': list(transcript.values())})
 
     text_df['transcript'] = text_df['transcript'].fillna('UNK')
     text_df['token'] = text_df['transcript'].str.replace(r'\[.*\]', '')
 
     # Map in annotations
-    text_df['interview_score'] = text_df['file'].map(annotation['interview'])
+    text_df['interview_score'] = text_df['video_id'].map(annotation['interview'])
 
     # Create directory if it doesnt exist
     if not os.path.exists('../data/text_data/{}_data/'.format(partition)):
@@ -348,41 +184,47 @@ def extract_text(partition):
     with open('../data/text_data/{}_data/{}_text_df.pkl'.format(partition, partition), 'wb') as output:
         pickle.dump(text_df, output, protocol=4)
 
+    pass
 
-def transform_text(partition, word_to_index):
 
-    logging.info('Begin text transformation on {}'.format(partition))
+def transform_images(partition, frame_num):
 
-    # Load transcripts
-    with open('../data/text_data/{}_data/{}_text_df.pkl'.format(partition, partition), 'rb') as f:
-        observations = pickle.load(f, encoding='latin1')
+    logging.info('Begin image transformations for {} partition'.format(partition))
 
-    # Transform embedding resources
-    default_dict_instance = defaultdict(lambda: word_to_index['UNK'])
-    default_dict_instance.update(word_to_index)
-    word_to_index = default_dict_instance
+    # Open answers file
+    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
+        label_file = pickle.load(f, encoding='latin1')
 
-    # TODO remove words that were cutoff at the end of the video
+    # Get all IDs for videos for the training set
+    img_ids = os.listdir('../data/image_data/{}_data'.format(partition))
+    vid_ids = [i + '.mp4' for i in img_ids]
+    y = [label_file['interview'][i + '.mp4'] for i in img_ids]
 
-    # Convert text to normalized tokens. Unknown tokens will map to 'UNK'.
-    observations['tokens'] = observations['transcript'].apply(simple_preprocess)
+    # Create empty array to store image data
+    X = np.empty(shape=(len(y), 224, 224, 3))
+    counter = 0
 
-    # Convert tokens to indices
-    observations['indices'] = observations['tokens'].apply(lambda token_list: list(map(lambda token: word_to_index[token],
-                                                                                       token_list)))
-    observations['indices'] = observations['indices'].apply(lambda x: np.array(x))
+    for image in img_ids:
+        # Load the image
+        filename = '../data/image_data/{}_data/{}/frame{}.jpg'.format(partition, image, frame_num)
+        original = load_img(filename, target_size=(224, 224))
 
-    # Pad indices list with zeros, so that every article's list of indices is the same length
-    X = pad_sequences(observations['indices'], 80)
+        # Convert to numpy array
+        numpy_image = img_to_array(original)
 
-    # Create data sets for model
-    y = observations['interview_score'].values
+        # Resize and store in one big array
+        image_temp = np.expand_dims(numpy_image, axis=0)
+        image_temp = vgg16.preprocess_input(image_temp)
+        X[counter] = image_temp
+        counter += 1
 
-    # Save as pickled files
-    with open('../data/text_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
+    # Save arrays as pickled files
+    with open('../data/image_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
         pickle.dump(X, output, protocol=4)
-    with open('../data/text_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
+    with open('../data/image_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
         pickle.dump(y, output, protocol=4)
+    with open('../data/image_data/pickle_files/vid_ids_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(vid_ids, output, protocol=4)
 
     pass
 
@@ -403,6 +245,7 @@ def transform_audio(partition, n_mfcc):
     # Get all IDs for videos for the training set
     audio_files = os.listdir('../data/audio_data/{}_data'.format(partition))
     audio_files = [i.split('.wav')[0] for i in audio_files]
+    id_array = [i + '.mp4' for i in audio_files]
     score = [label_file['interview'][i + '.mp4'] for i in audio_files]
     score = np.array(score)
 
@@ -473,28 +316,6 @@ def transform_audio(partition, n_mfcc):
         values[n_mfcc * 2 + 14] = np.mean(tonnetz)
         values[n_mfcc * 2 + 15] = np.std(tonnetz)
 
-        """
-        # Extract features and store in the values array
-        values[0:n_mfcc] = librosa.feature.mfcc(y, n_mfcc=n_mfcc).mean(axis=1)
-        values[n_mfcc:n_mfcc * 2] = librosa.feature.mfcc(y, n_mfcc=n_mfcc).mean(axis=1)
-        values[n_mfcc * 2] = np.mean(librosa.feature.rmse(y))
-        values[n_mfcc * 2 + 1] = np.std(librosa.feature.rmse(y))
-        values[n_mfcc * 2 + 2] = np.mean(librosa.feature.zero_crossing_rate(y))
-        values[n_mfcc * 2 + 3] = np.std(librosa.feature.zero_crossing_rate(y))
-        values[n_mfcc * 2 + 4] = np.mean(librosa.feature.tempogram(y))
-        values[n_mfcc * 2 + 5] = np.std(librosa.feature.tempogram(y))
-        values[n_mfcc * 2 + 6] = np.mean(librosa.feature.spectral_flatness(y))
-        values[n_mfcc * 2 + 7] = np.std(librosa.feature.spectral_flatness(y))
-        values[n_mfcc * 2 + 8] = np.mean(librosa.feature.spectral_bandwidth(y))
-        values[n_mfcc * 2 + 9] = np.std(librosa.feature.spectral_bandwidth(y))
-        values[n_mfcc * 2 + 10] = np.mean(librosa.feature.spectral_rolloff(y))
-        values[n_mfcc * 2 + 11] = np.std(librosa.feature.spectral_rolloff(y))
-        values[n_mfcc * 2 + 12] = np.mean(librosa.feature.spectral_contrast(y))
-        values[n_mfcc * 2 + 13] = np.std(librosa.feature.spectral_contrast(y))
-        values[n_mfcc * 2 + 14] = np.mean(librosa.feature.tonnetz(y))
-        values[n_mfcc * 2 + 15] = np.std(librosa.feature.tonnetz(y))
-        """
-
         # Append values to matrix
         audio_matrix[counter] = values
         counter += 1
@@ -502,7 +323,47 @@ def transform_audio(partition, n_mfcc):
     # Create final dataframe
     audio_df = pd.DataFrame(audio_matrix, columns=cols)
     audio_df['interview_score'] = score
+    audio_df['video_id'] = id_array
 
     audio_df.to_csv('../data/audio_data/pickle_files/{}_df.csv'.format(partition, partition), index=False)
+
+    pass
+
+
+def transform_text(partition, word_to_index):
+
+    logging.info('Begin text transformation on {}'.format(partition))
+
+    # Load transcripts
+    with open('../data/text_data/{}_data/{}_text_df.pkl'.format(partition, partition), 'rb') as f:
+        observations = pickle.load(f, encoding='latin1')
+
+    # Transform embedding resources
+    default_dict_instance = defaultdict(lambda: word_to_index['UNK'])
+    default_dict_instance.update(word_to_index)
+    word_to_index = default_dict_instance
+
+    # Convert text to normalized tokens. Unknown tokens will map to 'UNK'.
+    observations['tokens'] = observations['transcript'].apply(simple_preprocess)
+
+    # Convert tokens to indices
+    observations['indices'] = observations['tokens'].apply(lambda token_list: list(map(lambda token: word_to_index[token],
+                                                                                       token_list)))
+    observations['indices'] = observations['indices'].apply(lambda x: np.array(x))
+
+    # Pad indices list with zeros, so that every article's list of indices is the same length
+    X = pad_sequences(observations['indices'], 80)
+
+    # Create data sets for model
+    y = observations['interview_score'].values
+    vid_id = observations['video_id'].values
+
+    # Save as pickled files
+    with open('../data/text_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(X, output, protocol=4)
+    with open('../data/text_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(y, output, protocol=4)
+    with open('../data/text_data/pickle_files/vid_ids_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(vid_id, output, protocol=4)
 
     pass
