@@ -4,6 +4,9 @@ import models
 import lib
 import resources
 from keras.callbacks import ModelCheckpoint
+from keras.models import load_model
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
 import pandas as pd
 
 
@@ -18,7 +21,8 @@ def main():
 
     #extract()
     #transform()
-    model()
+    #model()
+    ensemble()
 
     pass
 
@@ -31,8 +35,8 @@ def extract():
     """
 
     # Download resources
-    resources.download_first_impressions()
-    resources.download_embedding()
+    #resources.download_first_impressions()
+    #resources.download_embedding()
 
     # Extract images, audio files, and text transcripts for each partition
     for partition in ['training', 'test', 'validation']:
@@ -51,26 +55,23 @@ def extract():
 
 def transform():
 
-    #embedding_matrix, word_to_index = resources.create_embedding_matrix()
+    embedding_matrix, word_to_index = resources.create_embedding_matrix()
 
     for partition in ['training', 'test', 'validation']:
 
-        # Transform raw audio to melspectrograms
-        #lib.audio2melspec(partition=partition)
+        # Transform raw jpegs into numpy arrays
+        lib.transform_images(partition=partition, frame_num=4)
 
         # Transform raw audio to feature matrix
         lib.transform_audio(partition=partition, n_mfcc=13)
 
-        # Transform raw jpegs into numpy arrays
-        #lib.img2array(partition=partition, frame_num=4)
-
         # Transform text to tokens
-        #lib.transform_text(partition=partition, word_to_index=word_to_index)
+        lib.transform_text(partition=partition, word_to_index=word_to_index)
 
     pass
 
 
-def model(image=False, audio=True, text=False):
+def model(image=True, audio=True, text=True):
 
     if image:
 
@@ -90,8 +91,9 @@ def model(image=False, audio=True, text=False):
         checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         image_model.fit(X_train, y_train,
                         validation_data=(X_test, y_test),
-                        epochs=150, batch_size=32,
-                        callbacks=[checkpoint])
+                        batch_size=32, epochs=5,
+                        callbacks=[checkpoint],
+                        shuffle=True)
 
     if audio:
 
@@ -99,7 +101,7 @@ def model(image=False, audio=True, text=False):
         test_set = pd.read_csv('../data/audio_data/pickle_files/test_df.csv')
 
         all_data = pd.concat((training_set, test_set), axis=0)
-        X_all = all_data.drop('interview_score', axis=1)
+        X_all = all_data.drop(['interview_score', 'video_id'], axis=1)
         y_all = all_data['interview_score']
 
         logging.info('Start training audio model')
@@ -130,24 +132,118 @@ def model(image=False, audio=True, text=False):
 
         # Create model object and fit
         text_model = models.text_cnn_model(embedding_matrix=embedding_matrix)
-        filename = '../output/audio_model.h5'
+        filename = '../output/text_model.h5'
         checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         text_model.fit(X_train, y_train,
-                       batch_size=32, epochs=100,
+                       batch_size=32, epochs=2,
                        validation_data=(X_test, y_test),
-                       callbacks=[checkpoint])
+                       callbacks=[checkpoint],
+                       shuffle=True)
 
     pass
 
 
-def validate():
+def ensemble():
 
-    pass
+    logging.info('Begin Ensemble model building, loading models')
+
+    # Load models
+    image_model = load_model('../output/image_model.h5')
+    audio_model = pickle.load(open('../output/audio_model.pkl', 'rb'))
+    text_model = load_model('../output/text_model.h5')
+
+    logging.info('Load data files')
+
+    # Load image data
+    with open('../data/image_data/pickle_files/X_training.pkl', 'rb') as file:
+        X_img_train = pickle.load(file)
+    with open('../data/image_data/pickle_files/X_test.pkl', 'rb') as file:
+        X_img_test = pickle.load(file)
+    with open('../data/image_data/pickle_files/y_training.pkl', 'rb') as file:
+        y_img_train = pickle.load(file)
+    with open('../data/image_data/pickle_files/y_test.pkl', 'rb') as file:
+        y_img_test = pickle.load(file)
+    with open('../data/image_data/pickle_files/vid_ids_training.pkl', 'rb') as file:
+        id_img_train = pickle.load(file)
+    with open('../data/image_data/pickle_files/vid_ids_test.pkl', 'rb') as file:
+        id_img_test = pickle.load(file)
+
+    # Load audio data
+    aud_train = pd.read_csv('../data/audio_data/pickle_files/training_df.csv')
+    aud_test = pd.read_csv('../data/audio_data/pickle_files/test_df.csv')
+    X_aud_train = aud_train.drop(['interview_score', 'video_id'], axis=1)
+    id_aud_train = aud_train['video_id']
+    X_aud_test = aud_test.drop(['interview_score', 'video_id'], axis=1)
+    id_aud_test = aud_test['video_id']
+
+    # Load text data
+    with open('../data/text_data/pickle_files/X_training.pkl', 'rb') as file:
+        X_text_train = pickle.load(file)
+    with open('../data/text_data/pickle_files/X_test.pkl', 'rb') as file:
+        X_text_test = pickle.load(file)
+    with open('../data/text_data/pickle_files/vid_ids_training.pkl', 'rb') as file:
+        id_text_train = pickle.load(file)
+    with open('../data/text_data/pickle_files/vid_ids_test.pkl', 'rb') as file:
+        id_text_test = pickle.load(file)
+
+    logging.info('Getting predictions for all 3 models')
+
+    # Get predictions
+    img_train_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict(X_img_train)],
+                                 'video_ids': id_img_train,
+                                 'interview_score': y_img_train})
+    img_test_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict(X_img_test)],
+                                'video_ids': id_img_test,
+                                'interview_score':y_img_test})
+    aud_train_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_train),
+                                 'video_ids': id_aud_train})
+    aud_test_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_test),
+                                'video_ids': id_aud_test})
+    text_train_df = pd.DataFrame({'text_preds': [i[0] for i in text_model.predict(X_text_train)],
+                                  'video_ids': id_text_train})
+    text_test_df = pd.DataFrame({'text_preds': [i[0] for i in text_model.predict(X_text_test)],
+                                 'video_ids': id_text_test})
+
+    logging.info('Merge predictions together into single data frame')
+
+    # Merge predictions
+    train_preds = img_train_df.merge(aud_train_df, on='video_ids')
+    train_preds = train_preds.merge(text_train_df, on='video_ids')
+    test_preds = img_test_df.merge(aud_test_df, on='video_ids')
+    test_preds = test_preds.merge(text_test_df, on='video_ids')
+
+    # Split target variable and features
+    X_train = train_preds[['img_preds', 'aud_preds', 'text_preds']]
+    y_train = train_preds[['interview_score']]
+    X_test = test_preds[['img_preds', 'aud_preds', 'text_preds']]
+    y_test = test_preds[['interview_score']]
+
+    logging.info('Build OLS model to combine model outputs')
+
+    # Build model
+    ols_model = LinearRegression()
+    ols_model.fit(X_train, y_train)
+
+    # Score model
+    train_score = mean_squared_error(y_train, ols_model.predict(X_train))
+    test_score = mean_squared_error(y_test, ols_model.predict(X_test))
+
+    logging.info('Score on training set: {}'.format(train_score))
+    logging.info('Score on test set: {}'.format(test_score))
+
+    # Save model
+    with open('../output/ensemble_model.pkl', 'wb') as fid:
+        pickle.dump(ols_model, fid)
+
+    logging.info('Ensemble model saved')
+
+    return
 
 
 def score_new_vid():
 
     pass
+
 
 # Main section
 if __name__ == '__main__':
