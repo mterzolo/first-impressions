@@ -19,8 +19,8 @@ def main():
 
     logging.getLogger().setLevel(level=logging.DEBUG)
 
-    extract()
-    transform()
+    #extract()
+    #transform()
     model()
     ensemble()
 
@@ -71,7 +71,7 @@ def transform():
     pass
 
 
-def model(image=True, audio=True, text=True):
+def model(image=True, audio=False, text=True):
 
     if image:
 
