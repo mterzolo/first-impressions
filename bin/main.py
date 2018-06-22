@@ -19,9 +19,9 @@ def main():
 
     logging.getLogger().setLevel(level=logging.DEBUG)
 
-    #extract()
-    #transform()
-    #model()
+    extract()
+    transform()
+    model()
     ensemble()
 
     pass
@@ -35,8 +35,8 @@ def extract():
     """
 
     # Download resources
-    #resources.download_first_impressions()
-    #resources.download_embedding()
+    resources.download_first_impressions()
+    resources.download_embedding()
 
     # Extract images, audio files, and text transcripts for each partition
     for partition in ['training', 'test', 'validation']:
@@ -91,7 +91,7 @@ def model(image=True, audio=True, text=True):
         checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         image_model.fit(X_train, y_train,
                         validation_data=(X_test, y_test),
-                        batch_size=32, epochs=5,
+                        batch_size=32, epochs=125,
                         callbacks=[checkpoint],
                         shuffle=True)
 
@@ -135,7 +135,7 @@ def model(image=True, audio=True, text=True):
         filename = '../output/text_model.h5'
         checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         text_model.fit(X_train, y_train,
-                       batch_size=32, epochs=2,
+                       batch_size=32, epochs=75,
                        validation_data=(X_test, y_test),
                        callbacks=[checkpoint],
                        shuffle=True)
