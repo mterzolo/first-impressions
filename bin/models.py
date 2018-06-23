@@ -1,12 +1,14 @@
 import logging
-import resources
 import keras
 from keras.applications import vgg16
 from keras.models import Model
-from keras.layers import Dense, Flatten, Dropout, LSTM, Bidirectional, Embedding
-from keras.callbacks import ModelCheckpoint
+from keras.layers import Dense, Flatten, Dropout, LSTM, Bidirectional, Embedding, Flatten, Lambda
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
+
+import numpy as np
+from keras import layers, models
+from keras import backend as K
 
 
 def image_cnn_model():
@@ -33,6 +35,28 @@ def image_cnn_model():
     # Create the model
     model = Model(base_model.input, preds)
     model.compile(optimizer=optimizer, loss='mean_squared_error')
+
+    return model
+
+
+def image_lrcn():
+
+    # Set learning phase to 0
+    K.set_learning_phase(0)
+
+    # Set input layer
+    video = layers.Input(shape=(None, 224, 224, 3), name='video_input')
+
+    # Load the VGG16 model
+    cnn = vgg16.VGG16(weights="imagenet", include_top=False, pooling='avg')
+    cnn.trainable = False
+
+    # Wrap cnn into Lambda and pass it into TimeDistributed
+    encoded_frame = layers.TimeDistributed(Lambda(lambda x: cnn(x)))(video)
+    encoded_vid = layers.LSTM(256)(encoded_frame)
+    outputs = layers.Dense(1, activation='linear')(encoded_vid)
+    model = models.Model(inputs=[video], outputs=outputs)
+    model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
 
     return model
 
