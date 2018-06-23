@@ -20,9 +20,9 @@ def main():
     logging.getLogger().setLevel(level=logging.DEBUG)
 
     #extract()
-    #transform()
+    transform()
     model()
-    ensemble()
+    #ensemble()
 
     pass
 
@@ -55,23 +55,26 @@ def extract():
 
 def transform():
 
-    embedding_matrix, word_to_index = resources.create_embedding_matrix()
+    #embedding_matrix, word_to_index = resources.create_embedding_matrix()
 
     for partition in ['training', 'test', 'validation']:
 
         # Transform raw jpegs into numpy arrays
-        lib.transform_images(partition=partition, frame_num=4)
+        lib.transform_images_5d(partition=partition, num_frames=20)
+
+        # Transform raw jpegs into numpy arrays
+        #lib.transform_images(partition=partition, frame_num=4)
 
         # Transform raw audio to feature matrix
-        lib.transform_audio(partition=partition, n_mfcc=13)
+        #lib.transform_audio(partition=partition, n_mfcc=13)
 
         # Transform text to tokens
-        lib.transform_text(partition=partition, word_to_index=word_to_index)
+        #lib.transform_text(partition=partition, word_to_index=word_to_index)
 
     pass
 
 
-def model(image=True, audio=False, text=False):
+def model(image=False, audio=False, text=False, image_5d=True):
 
     if image:
 
@@ -94,6 +97,25 @@ def model(image=True, audio=False, text=False):
                         batch_size=64, epochs=100,
                         callbacks=[checkpoint],
                         shuffle=True)
+    if image_5d:
+
+        # Load data
+        with open('../data/image_data/pickle_files/X_5d_training.pkl', 'rb') as file:
+            X_train = pickle.load(file)
+        with open('../data/image_data/pickle_files/y_5d_training.pkl', 'rb') as file:
+            y_train = pickle.load(file)
+        with open('../data/image_data/pickle_files/X_5d_test.pkl', 'rb') as file:
+            X_test = pickle.load(file)
+        with open('../data/image_data/pickle_files/y_5d_test.pkl', 'rb') as file:
+            y_test = pickle.load(file)
+
+
+        # Load model and traing
+        image_model = models.image_lrcn()
+        image_model.fit(x=X_train, y=y_train,
+                        validation_data=(X_test, y_test),
+                        batch_size = 32, epochs = 1,
+                        shuffle=False)
 
     if audio:
 
