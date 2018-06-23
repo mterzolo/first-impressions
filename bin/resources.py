@@ -6,7 +6,7 @@ import requests
 import pickle
 import subprocess
 
-from lib import get_conf
+#from lib import get_conf
 
 
 def download_first_impressions():
