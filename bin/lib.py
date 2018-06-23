@@ -229,7 +229,7 @@ def transform_images(partition, frame_num):
     pass
 
 
-def transform_images_5d(partition, num_frames):
+def transform_images_5d(partition, num_frames, num_samples):
 
     logging.info('Begin transform images 5d for the {} partition'.format(partition))
 
@@ -238,12 +238,12 @@ def transform_images_5d(partition, num_frames):
         label_file = pickle.load(f, encoding='latin1')
 
     # Get all IDs for videos for the training set
-    vid_ids = os.listdir('../data/image_data/{}_data'.format(partition))
+    vid_ids = os.listdir('../data/image_data/{}_data'.format(partition))[0:num_samples]
     file_ids = [i + '.mp4' for i in vid_ids]
     y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
 
     # Create empty array to store image data
-    X = np.empty(shape=(len(y), num_frames, 224, 224, 3))
+    X = np.empty(shape=(num_samples, num_frames, 224, 224, 3))
     out_counter = 0
 
     for video in vid_ids:

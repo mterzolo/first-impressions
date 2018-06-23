@@ -60,7 +60,7 @@ def transform():
     for partition in ['training', 'test', 'validation']:
 
         # Transform raw jpegs into numpy arrays
-        lib.transform_images_5d(partition=partition, num_frames=20)
+        lib.transform_images_5d(partition=partition, num_frames=20, num_samples=100)
 
         # Transform raw jpegs into numpy arrays
         #lib.transform_images(partition=partition, frame_num=4)
