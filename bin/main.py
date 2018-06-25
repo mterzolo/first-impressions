@@ -44,7 +44,7 @@ def extract():
     for partition in ['training', 'test', 'validation']:
 
         # Chop video up into images and save into separate directory
-        lib.extract_images(partition, num_frames=20)
+        lib.extract_images(partition, num_frames=10)
 
         # Strip audio from mp4 and save in separate directory
         lib.extract_audio(partition)
@@ -62,7 +62,7 @@ def transform():
     for partition in ['training', 'test', 'validation']:
 
         # Transform raw jpegs into numpy arrays
-        lib.transform_images_5d_chunks(partition=partition, num_frames=20)
+        lib.transform_images_5d_chunks(partition=partition, num_frames=10)
 
         # Transform raw jpegs into numpy arrays
         #lib.transform_images(partition=partition, frame_num=4)
@@ -76,12 +76,12 @@ def transform():
     pass
 
 
-def model(image=False, audio=False, text=False, image_5d=False, image_5d_chunks=True):
+def model(image=False, audio=False, text=False, image_5d_chunks=True):
 
     if image_5d_chunks:
 
         # Parameters
-        params = {'dim': (20, 224, 224),
+        params = {'dim': (10, 224, 224),
                   'batch_size': 16,
                   'n_channels': 3,
                   'shuffle': True}
@@ -101,15 +101,15 @@ def model(image=False, audio=False, text=False, image_5d=False, image_5d_chunks=
                                              labels=test_labels, **params)
 
         model = models.image_lrcn()
-        filename = '../output/image_model.h5'
-        checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
 
         # Train model on data set
         model.fit_generator(generator=training_generator,
                             validation_data=validation_generator,
                             use_multiprocessing=True,
                             workers=6,
-                            callbacks=[checkpoint])
+                            epochs=5)
+
+        model.save('../output/image_model.h5')
 
     if image:
 
