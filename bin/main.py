@@ -109,7 +109,7 @@ def model(image=False, audio=False, text=False, image_5d_chunks=True):
                             workers=6,
                             epochs=5)
 
-        model.save('../output/image_model.h5')
+        model.save_weights('../output/image_model.h5')
 
     if image:
 
@@ -186,7 +186,8 @@ def ensemble():
     logging.info('Begin Ensemble model building, loading models')
 
     # Load models
-    image_model = load_model('../output/image_model.h5')
+    image_model = models.image_lrcn()
+    image_model.load_weights('../output/image_model.h5')
     audio_model = pickle.load(open('../output/audio_model.pkl', 'rb'))
     text_model = load_model('../output/text_model.h5')
 
@@ -205,16 +206,14 @@ def ensemble():
                                          labels=test_labels, batch_size=2000,
                                          n_channels=3, dim=(20, 224, 224),
                                          shuffle=False)
+    holdout_generator = DataGenerator(partition='validation', list_IDs=range(2000),
+                                      labels=test_labels, batch_size=2000,
+                                      n_channels=3, dim=(20, 224, 224),
+                                      shuffle=False)
 
     logging.info('Load data files')
 
     # Load image data
-    with open('../data/image_data/pickle_files/X_training.pkl', 'rb') as file:
-        X_img_train = pickle.load(file)
-    with open('../data/image_data/pickle_files/X_test.pkl', 'rb') as file:
-        X_img_test = pickle.load(file)
-    with open('../data/image_data/pickle_files/X_validation.pkl', 'rb') as file:
-        X_img_val = pickle.load(file)
     with open('../data/image_data/pickle_files/y_training.pkl', 'rb') as file:
         y_img_train = pickle.load(file)
     with open('../data/image_data/pickle_files/y_test.pkl', 'rb') as file:
@@ -262,7 +261,7 @@ def ensemble():
     img_test_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict_generator(validation_generator)],
                                 'video_ids': id_img_test,
                                 'interview_score':y_img_test})
-    img_val_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict(X_img_val)],
+    img_val_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict_generator(holdout_generator)],
                                'video_ids': id_img_val,
                                'interview_score': y_img_val})
     aud_train_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_train),
@@ -330,18 +329,22 @@ def ensemble():
 
 def score_new_vid():
 
+    logging.info('Begin extraction for scoring partition')
+
     # Extract features from vids
-    lib.extract_images(partition='vids_to_score', num_frames=20)
-    lib.extract_audio(partition='vids_to_score')
-    lib.extract_text(partition='vids_to_score')
+    lib.extract_images(partition='score', num_frames=20)
+    lib.extract_audio(partition='score')
+    lib.extract_text(partition='score')
+
+    logging.info('Begin transformation for scoring partition')
 
     # Transform features
     embedding_matrix, word_to_index = resources.create_embedding_matrix()
-    lib.transform_images_5d_chunks(partition='vids_to_score', num_frames=20)
-    lib.transform_audio(partition='vids_to_score', n_mfcc=13)
-    lib.transform_text(partition='vids_to_score', word_to_index=word_to_index)
+    lib.transform_images_5d_chunks(partition='score', num_frames=20)
+    lib.transform_audio(partition='score', n_mfcc=13)
+    lib.transform_text(partition='score', word_to_index=word_to_index)
 
-    # Predict values
+    logging.info('Load models for evaluation of the scoring partition')
 
     # Load models
     image_model = load_model('../output/image_model.h5')
@@ -349,8 +352,53 @@ def score_new_vid():
     text_model = load_model('../output/text_model.h5')
     ensemble_model = pickle.load(open('../output/ensemble_model.pkl', 'rb'))
 
+    logging.info('Load transformed data')
 
+    # Load image data
+    with open('../data/image_data/pickle_files/y_score.pkl', 'rb') as file:
+        y_img_score = pickle.load(file)
+    with open('../data/image_data/pickle_files/vid_ids_score.pkl', 'rb') as file:
+        id_img_score = pickle.load(file)
 
+    # Load audio data
+    aud_to_score = pd.read_csv('../data/audio_data/pickle_files/score_df.csv')
+    X_aud_score = aud_to_score.drop(['interview_score', 'video_id'], axis=1)
+    id_aud_score = aud_to_score['video_id']
+
+    # Load text data
+    with open('../data/text_data/pickle_files/X_score.pkl', 'rb') as file:
+        X_text_score = pickle.load(file)
+    with open('../data/text_data/pickle_files/vid_ids_score.pkl', 'rb') as file:
+        id_text_score = pickle.load(file)
+
+    # Load generator
+    score_generator = DataGenerator(partition='training', list_IDs=range(len(y_img_score)),
+                                    labels=y_img_score, batch_size=len(y_img_score),
+                                    n_channels=3, dim=(20, 224, 224),
+                                    shuffle=False)
+
+    logging.info('Predict values with image, text and audio models')
+
+    # Predict values
+    img_score_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict_generator(score_generator)],
+                                 'video_ids': id_img_score})
+    aud_score_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_score),
+                                 'video_ids': id_aud_score})
+    text_score_df = pd.DataFrame({'text_preds': [i[0] for i in text_model.predict(X_text_score)],
+                                  'video_ids': id_text_score})
+
+    logging.info('Make final predictions')
+
+    # Merge predictions
+    score_preds = img_score_df.merge(aud_score_df, on='video_ids')
+    score_preds = score_preds.merge(text_score_df, on='video_ids')
+
+    # Make final prediction
+    X_score = score_preds[['img_preds', 'aud_preds', 'text_preds']]
+    score_preds['final_prediction'] = ensemble_model.predict(X_score)
+
+    # Save predictions to disk
+    score_preds.to_csv('../output/predictions.csv', index=False)
 
     pass
 
