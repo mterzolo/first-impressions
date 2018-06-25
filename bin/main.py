@@ -82,7 +82,7 @@ def model(image=False, audio=False, text=False, image_5d=False, image_5d_chunks=
 
         # Parameters
         params = {'dim': (20, 224, 224),
-                  'batch_size': 2,
+                  'batch_size': 16,
                   'n_channels': 3,
                   'shuffle': True}
 
@@ -94,19 +94,22 @@ def model(image=False, audio=False, text=False, image_5d=False, image_5d_chunks=
 
         # Generators
         training_generator = DataGenerator(partition='training',
-                                           list_IDs=range(76),
+                                           list_IDs=range(6000),
                                            labels=training_labels, **params)
         validation_generator = DataGenerator(partition='test',
-                                             list_IDs=range(25),
+                                             list_IDs=range(2000),
                                              labels=test_labels, **params)
 
         model = models.image_lrcn()
+        filename = '../output/image_model.h5'
+        checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
 
-        # Train model on dataset
+        # Train model on data set
         model.fit_generator(generator=training_generator,
                             validation_data=validation_generator,
                             use_multiprocessing=True,
-                            workers=6)
+                            workers=6,
+                            callbacks=[checkpoint])
 
     if image:
 
@@ -129,25 +132,6 @@ def model(image=False, audio=False, text=False, image_5d=False, image_5d_chunks=
                         batch_size=64, epochs=100,
                         callbacks=[checkpoint],
                         shuffle=True)
-    if image_5d:
-
-        # Load data
-        with open('../data/image_data/pickle_files/X_5d_training.pkl', 'rb') as file:
-            X_train = pickle.load(file)
-        with open('../data/image_data/pickle_files/y_5d_training.pkl', 'rb') as file:
-            y_train = pickle.load(file)
-        with open('../data/image_data/pickle_files/X_5d_test.pkl', 'rb') as file:
-            X_test = pickle.load(file)
-        with open('../data/image_data/pickle_files/y_5d_test.pkl', 'rb') as file:
-            y_test = pickle.load(file)
-
-
-        # Load model and traing
-        image_model = models.image_lrcn()
-        image_model.fit(x=X_train, y=y_train,
-                        validation_data=(X_test, y_test),
-                        batch_size = 32, epochs = 1,
-                        shuffle=False)
 
     if audio:
 
@@ -206,6 +190,22 @@ def ensemble():
     audio_model = pickle.load(open('../output/audio_model.pkl', 'rb'))
     text_model = load_model('../output/text_model.h5')
 
+    # Load labels set
+    with open('../data/image_data/pickle_files/y_5d_training.pkl', 'rb') as file:
+        training_labels = pickle.load(file)
+    with open('../data/image_data/pickle_files/y_5d_test.pkl', 'rb') as file:
+        test_labels = pickle.load(file)
+
+    # Load generators
+    training_generator = DataGenerator(partition='training', list_IDs=range(6000),
+                                       labels=training_labels, batch_size=6000,
+                                       n_channels=3, dim=(20, 224, 224),
+                                       shuffle=False)
+    validation_generator = DataGenerator(partition='test', list_IDs=range(2000),
+                                         labels=test_labels, batch_size=2000,
+                                         n_channels=3, dim=(20, 224, 224),
+                                         shuffle=False)
+
     logging.info('Load data files')
 
     # Load image data
@@ -256,27 +256,27 @@ def ensemble():
     logging.info('Getting predictions for all 3 models')
 
     # Get predictions
-    img_train_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict(X_img_train)],
+    img_train_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict_generator(training_generator)],
                                  'video_ids': id_img_train,
                                  'interview_score': y_img_train})
-    img_test_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict(X_img_test)],
+    img_test_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict_generator(validation_generator)],
                                 'video_ids': id_img_test,
                                 'interview_score':y_img_test})
     img_val_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict(X_img_val)],
-                                'video_ids': id_img_val,
-                                'interview_score': y_img_val})
+                               'video_ids': id_img_val,
+                               'interview_score': y_img_val})
     aud_train_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_train),
                                  'video_ids': id_aud_train})
     aud_test_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_test),
                                 'video_ids': id_aud_test})
     aud_val_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_val),
-                                'video_ids': id_aud_val})
+                               'video_ids': id_aud_val})
     text_train_df = pd.DataFrame({'text_preds': [i[0] for i in text_model.predict(X_text_train)],
                                   'video_ids': id_text_train})
     text_test_df = pd.DataFrame({'text_preds': [i[0] for i in text_model.predict(X_text_test)],
                                  'video_ids': id_text_test})
     text_val_df = pd.DataFrame({'text_preds': [i[0] for i in text_model.predict(X_text_val)],
-                                 'video_ids': id_text_val})
+                                'video_ids': id_text_val})
 
     logging.info('Merge predictions together into single data frame')
 
@@ -329,6 +329,28 @@ def ensemble():
 
 
 def score_new_vid():
+
+    # Extract features from vids
+    lib.extract_images(partition='vids_to_score', num_frames=20)
+    lib.extract_audio(partition='vids_to_score')
+    lib.extract_text(partition='vids_to_score')
+
+    # Transform features
+    embedding_matrix, word_to_index = resources.create_embedding_matrix()
+    lib.transform_images_5d_chunks(partition='vids_to_score', num_frames=20)
+    lib.transform_audio(partition='vids_to_score', n_mfcc=13)
+    lib.transform_text(partition='vids_to_score', word_to_index=word_to_index)
+
+    # Predict values
+
+    # Load models
+    image_model = load_model('../output/image_model.h5')
+    audio_model = pickle.load(open('../output/audio_model.pkl', 'rb'))
+    text_model = load_model('../output/text_model.h5')
+    ensemble_model = pickle.load(open('../output/ensemble_model.pkl', 'rb'))
+
+
+
 
     pass
 
