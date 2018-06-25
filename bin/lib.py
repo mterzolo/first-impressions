@@ -286,6 +286,66 @@ def transform_images_5d(partition, num_frames, num_samples):
     pass
 
 
+def transform_images_5d_chunks(partition, num_frames):
+
+    logging.info('Begin transform images 5d for the {} partition'.format(partition))
+
+    if not os.path.exists('../data/image_data/npy_files/{}_data/'.format(partition)):
+        os.makedirs('../data/image_data/npy_files/{}_data/'.format(partition))
+
+    # Open answers file
+    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
+        label_file = pickle.load(f, encoding='latin1')
+
+    # Get all IDs for videos for the training set
+    vid_ids = os.listdir('../data/image_data/{}_data'.format(partition))
+    file_ids = [i + '.mp4' for i in vid_ids]
+    y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
+
+    # Create empty array to store image data
+    X = np.empty(shape=(len(y), num_frames, 224, 224, 3))
+    out_counter = 0
+
+    for video in vid_ids:
+
+        images = os.listdir('../data/image_data/{}_data/{}'.format(partition, video))
+        X_temp = np.zeros(shape=(num_frames, 224, 224, 3))
+        in_counter = 0
+
+        for image in images:
+
+            # Load the image
+            original = load_img('../data/image_data/{}_data/{}/{}'.format(partition, video, image),
+                                target_size=(224, 224))
+
+            # Convert to numpy array
+            numpy_image = img_to_array(original)
+
+            # Resize and store in one big array
+            image_temp = np.expand_dims(numpy_image, axis=0)
+            image_temp = vgg16.preprocess_input(image_temp)
+            X_temp[in_counter] = image_temp
+
+            # Increment counter for number of images in observation
+            in_counter += 1
+
+        # Append to numpy array
+        X_temp = np.expand_dims(X_temp, axis=0)
+        X[out_counter] = X_temp
+
+        # Save the images numpy array
+        np.save('../data/image_data/npy_files/{}_data/{}.npy'.format(partition, out_counter), X_temp)
+
+        # Increment counter for observations in dataset
+        out_counter += 1
+
+    with open('../data/image_data/pickle_files/y_5d_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(y, output, protocol=4)
+    with open('../data/image_data/pickle_files/vid_ids_5d_{}.pkl'.format(partition), 'wb') as output:
+        pickle.dump(file_ids, output, protocol=4)
+
+    pass
+
 
 def transform_audio(partition, n_mfcc):
     """
