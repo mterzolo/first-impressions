@@ -8,6 +8,8 @@ from keras.models import load_model
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 import pandas as pd
+from keras import backend as K
+from my_classes import DataGenerator
 
 
 def main():
@@ -20,7 +22,7 @@ def main():
     logging.getLogger().setLevel(level=logging.DEBUG)
 
     #extract()
-    transform()
+    #transform()
     model()
     #ensemble()
 
@@ -60,7 +62,7 @@ def transform():
     for partition in ['training', 'test', 'validation']:
 
         # Transform raw jpegs into numpy arrays
-        lib.transform_images_5d(partition=partition, num_frames=20, num_samples=100)
+        lib.transform_images_5d_chunks(partition=partition, num_frames=20)
 
         # Transform raw jpegs into numpy arrays
         #lib.transform_images(partition=partition, frame_num=4)
@@ -74,7 +76,37 @@ def transform():
     pass
 
 
-def model(image=False, audio=False, text=False, image_5d=True):
+def model(image=False, audio=False, text=False, image_5d=False, image_5d_chunks=True):
+
+    if image_5d_chunks:
+
+        # Parameters
+        params = {'dim': (20, 224, 224),
+                  'batch_size': 2,
+                  'n_channels': 3,
+                  'shuffle': True}
+
+        # Load labels set
+        with open('../data/image_data/pickle_files/y_5d_training.pkl', 'rb') as file:
+            training_labels = pickle.load(file)
+        with open('../data/image_data/pickle_files/y_5d_test.pkl', 'rb') as file:
+            test_labels = pickle.load(file)
+
+        # Generators
+        training_generator = DataGenerator(partition='training',
+                                           list_IDs=range(76),
+                                           labels=training_labels, **params)
+        validation_generator = DataGenerator(partition='test',
+                                             list_IDs=range(25),
+                                             labels=test_labels, **params)
+
+        model = models.image_lrcn()
+
+        # Train model on dataset
+        model.fit_generator(generator=training_generator,
+                            validation_data=validation_generator,
+                            use_multiprocessing=True,
+                            workers=6)
 
     if image:
 
