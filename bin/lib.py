@@ -62,6 +62,21 @@ def get_conf(conf_name):
     return load_confs()[conf_name]
 
 
+def get_batch_name():
+    """
+    Get the name of the current run. This is a unique identifier for each run of this application
+    :return: The name of the current run. This is a unique identifier for each run of this application
+    :rtype: str
+    """
+    global BATCH_NAME
+
+    if BATCH_NAME is None:
+        logging.info('Batch name not yet set. Setting batch name.')
+        BATCH_NAME = str(datetime.datetime.utcnow()).replace(' ', '_').replace('/', '_').replace(':', '_')
+        logging.info('Batch name: {}'.format(BATCH_NAME))
+    return BATCH_NAME
+
+
 def extract_images(partition, num_frames):
 
     logging.info('Begin image extraction on {} partition'.format(partition))
@@ -302,9 +317,8 @@ def transform_images_5d_chunks(partition, num_frames):
     file_ids = [i + '.mp4' for i in vid_ids]
     y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
 
-    # Create empty array to store image data
-    X = np.empty(shape=(len(y), num_frames, 224, 224, 3))
     out_counter = 0
+
 
     for video in vid_ids:
 
@@ -331,7 +345,6 @@ def transform_images_5d_chunks(partition, num_frames):
 
         # Append to numpy array
         X_temp = np.expand_dims(X_temp, axis=0)
-        X[out_counter] = X_temp
 
         # Save the images numpy array
         np.save('../data/image_data/npy_files/{}_data/{}.npy'.format(partition, out_counter), X_temp)
