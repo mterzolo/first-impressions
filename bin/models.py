@@ -54,41 +54,12 @@ def image_lrcn():
 
     # Wrap cnn into Lambda and pass it into TimeDistributed
     encoded_frame = layers.TimeDistributed(Lambda(lambda x: cnn(x)))(video)
-    encoded_vid = layers.LSTM(256)(encoded_frame)
+    encoded_vid = layers.LSTM(64)(encoded_frame)
+    encoded_vid = layers.Dropout(.05)(encoded_vid)
+    adam_opt = keras.optimizers.Adam(lr=0.0005, decay=0.001)
     outputs = layers.Dense(1, activation='linear')(encoded_vid)
     model = models.Model(inputs=[video], outputs=outputs)
-    model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
-
-    return model
-
-def image_lcrn_chunks():
-
-    # Parameters
-    params = {'dim': (20, 224, 224),
-              'batch_size': 2,
-              'n_channels': 3,
-              'shuffle': True}
-
-    # Load labels set
-    with open('../data/image_data/pickle_files/y_5d_training.pkl', 'rb') as file:
-        training_labels = pickle.load(file)
-    with open('../data/image_data/pickle_files/y_5d_test.pkl', 'rb') as file:
-        test_labels = pickle.load(file)
-
-    # Generators
-    training_generator = DataGenerator(partition='training',
-                                       list_IDs=range(76),
-                                       labels=training_labels, **params)
-    validation_generator = DataGenerator(partition='test',
-                                         list_IDs=range(25),
-                                         labels=test_labels, **params)
-
-    # Train model on dataset
-    model.fit_generator(generator=training_generator,
-                        validation_data=validation_generator,
-                        use_multiprocessing=True,
-                        workers=6)
-
+    model.compile(optimizer=adam_opt, loss='mean_squared_error')
 
     return model
 
