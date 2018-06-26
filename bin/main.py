@@ -23,8 +23,9 @@ def main():
 
     #extract()
     #transform()
-    model()
-    ensemble()
+    #model()
+    #ensemble()
+    score_new_vid()
 
     pass
 
