@@ -163,7 +163,7 @@ def extract_audio(partition):
     pass
 
 
-def extract_text(partition, scoring=False):
+def extract_text(partition, training=True):
     """
 
     Takes transcripts and saves them as dataframes
@@ -177,7 +177,7 @@ def extract_text(partition, scoring=False):
     with open('../data/meta_data/transcription_{}.pkl'.format(partition), 'rb') as f:
         transcript = pickle.load(f, encoding='latin1')
 
-    if scoring:
+    if training:
         with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
             annotation = pickle.load(f, encoding='latin1')
 
@@ -188,7 +188,7 @@ def extract_text(partition, scoring=False):
     text_df['transcript'] = text_df['transcript'].fillna('UNK')
     text_df['token'] = text_df['transcript'].str.replace(r'\[.*\]', '')
 
-    if scoring:
+    if training:
         # Map in annotations
         text_df['interview_score'] = text_df['video_id'].map(annotation['interview'])
 
@@ -202,14 +202,14 @@ def extract_text(partition, scoring=False):
     pass
 
 
-def transform_images_5d_chunks(partition, num_frames, scoring=False):
+def transform_images_5d_chunks(partition, num_frames, training=True):
 
     logging.info('Begin transform images 5d for the {} partition'.format(partition))
 
     if not os.path.exists('../data/image_data/npy_files/{}_data/'.format(partition)):
         os.makedirs('../data/image_data/npy_files/{}_data/'.format(partition))
 
-    if scoring:
+    if training:
         # Open answers file
         with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
             label_file = pickle.load(f, encoding='latin1')
@@ -218,7 +218,7 @@ def transform_images_5d_chunks(partition, num_frames, scoring=False):
     vid_ids = os.listdir('../data/image_data/{}_data'.format(partition))
     file_ids = [i + '.mp4' for i in vid_ids]
 
-    if scoring:
+    if training:
         y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
 
     out_counter = 0
@@ -255,7 +255,7 @@ def transform_images_5d_chunks(partition, num_frames, scoring=False):
         # Increment counter for observations in dataset
         out_counter += 1
 
-    if scoring:
+    if training:
         with open('../data/image_data/pickle_files/y_5d_{}.pkl'.format(partition), 'wb') as output:
             pickle.dump(y, output, protocol=4)
 
@@ -265,7 +265,7 @@ def transform_images_5d_chunks(partition, num_frames, scoring=False):
     pass
 
 
-def transform_audio(partition, n_mfcc, scoring=False):
+def transform_audio(partition, n_mfcc, training=True):
     """
 
     compute features
@@ -283,7 +283,7 @@ def transform_audio(partition, n_mfcc, scoring=False):
     audio_files = [i.split('.wav')[0] for i in audio_files]
     id_array = [i + '.mp4' for i in audio_files]
 
-    if scoring:
+    if training:
         score = [label_file['interview'][i + '.mp4'] for i in audio_files]
         score = np.array(score)
 
@@ -361,7 +361,7 @@ def transform_audio(partition, n_mfcc, scoring=False):
     # Create final dataframe
     audio_df = pd.DataFrame(audio_matrix, columns=cols)
 
-    if scoring:
+    if training:
         audio_df['interview_score'] = score
 
     audio_df['video_id'] = id_array
@@ -371,7 +371,7 @@ def transform_audio(partition, n_mfcc, scoring=False):
     pass
 
 
-def transform_text(partition, word_to_index):
+def transform_text(partition, word_to_index, training=True):
 
     logging.info('Begin text transformation on {}'.format(partition))
 
@@ -396,7 +396,7 @@ def transform_text(partition, word_to_index):
     X = pad_sequences(observations['indices'], 80)
 
     # Create data sets for model
-    if scoring:
+    if training:
         y = observations['interview_score'].values
 
     vid_id = observations['video_id'].values
@@ -407,7 +407,7 @@ def transform_text(partition, word_to_index):
     with open('../data/text_data/pickle_files/vid_ids_{}.pkl'.format(partition), 'wb') as output:
         pickle.dump(vid_id, output, protocol=4)
 
-    if scoring:
+    if training:
         with open('../data/text_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
             pickle.dump(y, output, protocol=4)
 
