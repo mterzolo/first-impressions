@@ -8,7 +8,7 @@ from keras.models import load_model
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 import pandas as pd
-from keras import backend as K
+import numpy as np
 from my_classes import DataGenerator
 
 
@@ -288,6 +288,28 @@ def ensemble():
     val_preds = img_val_df.merge(aud_val_df, on='video_ids')
     val_preds = val_preds.merge(text_val_df, on='video_ids')
 
+    # Score models
+    img_train_score = np.sqrt(mean_squared_error(train_preds['interview_score'], train_preds['img_preds']))
+    img_test_score = np.sqrt(mean_squared_error(test_preds['interview_score'], test_preds['img_preds']))
+    img_val_score = np.sqrt(mean_squared_error(val_preds['interview_score'], val_preds['img_preds']))
+    aud_train_score = np.sqrt(mean_squared_error(train_preds['interview_score'], train_preds['aud_preds']))
+    aud_test_score = np.sqrt(mean_squared_error(test_preds['interview_score'], test_preds['aud_preds']))
+    aud_val_score = np.sqrt(mean_squared_error(val_preds['interview_score'], val_preds['aud_preds']))
+    text_train_score = np.sqrt(mean_squared_error(train_preds['interview_score'], train_preds['text_preds']))
+    text_test_score = np.sqrt(mean_squared_error(test_preds['interview_score'], test_preds['text_preds']))
+    text_val_score = np.sqrt(mean_squared_error(val_preds['interview_score'], val_preds['text_preds']))
+
+    # Print scores to screen
+    logging.info('Image score on the training set: {}'.format(img_train_score))
+    logging.info('Image score on the test set: {}'.format(img_test_score))
+    logging.info('Image score on the val set: {}'.format(img_val_score))
+    logging.info('Audio score on the training set: {}'.format(aud_train_score))
+    logging.info('Audio score on the test set: {}'.format(aud_test_score))
+    logging.info('Audio score on the val set: {}'.format(aud_val_score))
+    logging.info('Text score on the training set: {}'.format(text_train_score))
+    logging.info('Text score on the test set: {}'.format(text_test_score))
+    logging.info('Text score on the val set: {}'.format(text_val_score))
+
     # Split target variable and features
     X_train = train_preds[['img_preds', 'aud_preds', 'text_preds']]
     y_train = train_preds[['interview_score']]
@@ -310,8 +332,6 @@ def ensemble():
     logging.info('OLS Score on training set: {}'.format(train_score))
     logging.info('OLS Score on test set: {}'.format(test_score))
     logging.info('OLS Score on val set: {}'.format(val_score))
-
-
 
     # Simple Average
     simp_train_score = mean_squared_error(y_train, X_train.mean(axis=1))
