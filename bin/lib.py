@@ -274,9 +274,10 @@ def transform_audio(partition, n_mfcc, training=True):
 
     logging.info('Begin audio transformations for {} partition'.format(partition))
 
-    # Open answers file
-    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
-        label_file = pickle.load(f, encoding='latin1')
+    if training:
+        # Open answers file
+        with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
+            label_file = pickle.load(f, encoding='latin1')
 
     # Get all IDs for videos for the training set
     audio_files = os.listdir('../data/audio_data/{}_data'.format(partition))

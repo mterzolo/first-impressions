@@ -151,7 +151,6 @@ def download_embedding():
     :return: None
     :rtype: None
     """
-
     logging.info('Attempting to either validate or download and extract embeddings.')
 
     # Reference variables
@@ -241,7 +240,7 @@ def create_embedding_matrix():
     logging.info('Reading embedding matrix and word to index dictionary from file')
 
     # Get word weights from file via gensim
-    model = gensim.models.KeyedVectors.load_word2vec_format(get_conf('embedding_path'), binary=True)
+    model = gensim.models.KeyedVectors.load_word2vec_format('../resources/GoogleNews-vectors-negative300.bin', binary=True)
     embedding_matrix = model.syn0
     # Filter out words with index not in w2v range
     word_to_index = dict([(k, v.index) for k, v in model.vocab.items()])
