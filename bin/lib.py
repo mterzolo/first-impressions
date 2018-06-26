@@ -163,7 +163,7 @@ def extract_audio(partition):
     pass
 
 
-def extract_text(partition, training=True):
+def extract_text(partition, training=False):
     """
 
     Takes transcripts and saves them as dataframes

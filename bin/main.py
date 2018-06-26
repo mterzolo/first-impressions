@@ -22,7 +22,7 @@ def main():
     logging.getLogger().setLevel(level=logging.DEBUG)
 
     #extract()
-    transform()
+    #transform()
     #model()
     #ensemble()
     score_new_vid()
@@ -336,17 +336,17 @@ def score_new_vid():
     logging.info('Begin extraction for scoring partition')
 
     # Extract features from vids
-    lib.extract_images(partition='score', num_frames=20)
+    lib.extract_images(partition='score', num_frames=10)
     lib.extract_audio(partition='score')
-    lib.extract_text(partition='score')
+    lib.extract_text(partition='score', training=False)
 
     logging.info('Begin transformation for scoring partition')
 
     # Transform features
     embedding_matrix, word_to_index = resources.create_embedding_matrix()
-    lib.transform_images_5d_chunks(partition='score', num_frames=20)
-    lib.transform_audio(partition='score', n_mfcc=13)
-    lib.transform_text(partition='score', word_to_index=word_to_index)
+    lib.transform_images_5d_chunks(partition='score', num_frames=10, training=False)
+    lib.transform_audio(partition='score', n_mfcc=13, training=False)
+    lib.transform_text(partition='score', word_to_index=word_to_index, training=False)
 
     logging.info('Load models for evaluation of the scoring partition')
 
@@ -360,12 +360,12 @@ def score_new_vid():
     logging.info('Load transformed data')
 
     # Load image data
-    #with open('../data/image_data/pickle_files/vid_ids_score.pkl', 'rb') as file:
-        #id_img_score = pickle.load(file)
+    with open('../data/image_data/pickle_files/vid_ids_5d_score.pkl', 'rb') as file:
+        id_img_score = pickle.load(file)
 
     # Load audio data
     aud_to_score = pd.read_csv('../data/audio_data/pickle_files/score_df.csv')
-    X_aud_score = aud_to_score.drop(['interview_score', 'video_id'], axis=1)
+    X_aud_score = aud_to_score.drop(['video_id'], axis=1)
     id_aud_score = aud_to_score['video_id']
 
     # Load text data
@@ -377,14 +377,14 @@ def score_new_vid():
     # Load generator
     score_generator = DataGenerator(partition='training', list_IDs=range(len(id_aud_score)),
                                     labels=[0 for i in range(len(id_aud_score))], batch_size=len(id_aud_score),
-                                    n_channels=3, dim=(20, 224, 224),
+                                    n_channels=3, dim=(10, 224, 224),
                                     shuffle=False)
 
     logging.info('Predict values with image, text and audio models')
 
     # Predict values
     img_score_df = pd.DataFrame({'img_preds': [i[0] for i in image_model.predict_generator(score_generator)],
-                                 'video_ids': list(range(len(id_aud_score)))})
+                                 'video_ids': id_img_score})
     aud_score_df = pd.DataFrame({'aud_preds': audio_model.predict(X_aud_score),
                                  'video_ids': id_aud_score})
     text_score_df = pd.DataFrame({'text_preds': [i[0] for i in text_model.predict(X_text_score)],
