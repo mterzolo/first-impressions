@@ -24,7 +24,7 @@ def main():
     #extract()
     #transform()
     model()
-    #ensemble()
+    ensemble()
 
     pass
 
@@ -199,16 +199,16 @@ def ensemble():
 
     # Load generators
     training_generator = DataGenerator(partition='training', list_IDs=range(6000),
-                                       labels=training_labels, batch_size=6000,
-                                       n_channels=3, dim=(20, 224, 224),
+                                       labels=training_labels, batch_size=16,
+                                       n_channels=3, dim=(10, 224, 224),
                                        shuffle=False)
     validation_generator = DataGenerator(partition='test', list_IDs=range(2000),
-                                         labels=test_labels, batch_size=2000,
-                                         n_channels=3, dim=(20, 224, 224),
+                                         labels=test_labels, batch_size=16,
+                                         n_channels=3, dim=(10, 224, 224),
                                          shuffle=False)
     holdout_generator = DataGenerator(partition='validation', list_IDs=range(2000),
-                                      labels=test_labels, batch_size=2000,
-                                      n_channels=3, dim=(20, 224, 224),
+                                      labels=test_labels, batch_size=16,
+                                      n_channels=3, dim=(10, 224, 224),
                                       shuffle=False)
 
     logging.info('Load data files')
@@ -297,7 +297,7 @@ def ensemble():
 
     logging.info('Build OLS model to combine model outputs')
 
-    # Build model
+    # Build OLS model
     ols_model = LinearRegression()
     ols_model.fit(X_train, y_train)
 
@@ -306,14 +306,17 @@ def ensemble():
     test_score = mean_squared_error(y_test, ols_model.predict(X_test))
     val_score = mean_squared_error(y_val, ols_model.predict(X_val))
 
+    logging.info('OLS Score on training set: {}'.format(train_score))
+    logging.info('OLS Score on test set: {}'.format(test_score))
+    logging.info('OLS Score on val set: {}'.format(val_score))
+
+
+
     # Simple Average
     simp_train_score = mean_squared_error(y_train, X_train.mean(axis=1))
     simp_test_score = mean_squared_error(y_test, X_test.mean(axis=1))
     simp_val_score = mean_squared_error(y_val, X_val.mean(axis=1))
 
-    logging.info('OLS Score on training set: {}'.format(train_score))
-    logging.info('OLS Score on test set: {}'.format(test_score))
-    logging.info('OLS Score on val set: {}'.format(val_score))
     logging.info('Simple Average Score on training set: {}'.format(simp_train_score))
     logging.info('Simple Average Score on test set: {}'.format(simp_test_score))
     logging.info('Simple Average Score on val set: {}'.format(simp_val_score))

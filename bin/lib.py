@@ -163,7 +163,7 @@ def extract_audio(partition):
     pass
 
 
-def extract_text(partition):
+def extract_text(partition, scoring=False):
     """
 
     Takes transcripts and saves them as dataframes
@@ -176,8 +176,10 @@ def extract_text(partition):
     # Open transcript and annotations
     with open('../data/meta_data/transcription_{}.pkl'.format(partition), 'rb') as f:
         transcript = pickle.load(f, encoding='latin1')
-    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
-        annotation = pickle.load(f, encoding='latin1')
+
+    if scoring:
+        with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
+            annotation = pickle.load(f, encoding='latin1')
 
     # Transform into a data frame
     text_df = pd.DataFrame({'video_id': list(transcript.keys()),
@@ -186,15 +188,13 @@ def extract_text(partition):
     text_df['transcript'] = text_df['transcript'].fillna('UNK')
     text_df['token'] = text_df['transcript'].str.replace(r'\[.*\]', '')
 
-    # Map in annotations
-    text_df['interview_score'] = text_df['video_id'].map(annotation['interview'])
+    if scoring:
+        # Map in annotations
+        text_df['interview_score'] = text_df['video_id'].map(annotation['interview'])
 
     # Create directory if it doesnt exist
     if not os.path.exists('../data/text_data/{}_data/'.format(partition)):
         os.makedirs('../data/text_data/{}_data/'.format(partition))
-
-    # Save into text data directory
-    text_df.to_csv('../data/text_data/{}_data/{}_transcripts.csv'.format(partition, partition), index=False)
 
     with open('../data/text_data/{}_data/{}_text_df.pkl'.format(partition, partition), 'wb') as output:
         pickle.dump(text_df, output, protocol=4)
@@ -202,123 +202,26 @@ def extract_text(partition):
     pass
 
 
-def transform_images(partition, frame_num):
-
-    logging.info('Begin image transformations for {} partition'.format(partition))
-
-    # Open answers file
-    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
-        label_file = pickle.load(f, encoding='latin1')
-
-    # Get all IDs for videos for the training set
-    img_ids = os.listdir('../data/image_data/{}_data'.format(partition))
-    vid_ids = [i + '.mp4' for i in img_ids]
-    y = [label_file['interview'][i + '.mp4'] for i in img_ids]
-
-    # Create empty array to store image data
-    X = np.empty(shape=(len(y), 224, 224, 3))
-    counter = 0
-
-    for image in img_ids:
-        # Load the image
-        filename = '../data/image_data/{}_data/{}/frame{}.jpg'.format(partition, image, frame_num)
-        original = load_img(filename, target_size=(224, 224))
-
-        # Convert to numpy array
-        numpy_image = img_to_array(original)
-
-        # Resize and store in one big array
-        image_temp = np.expand_dims(numpy_image, axis=0)
-        image_temp = vgg16.preprocess_input(image_temp)
-        X[counter] = image_temp
-        counter += 1
-
-    # Save arrays as pickled files
-    with open('../data/image_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(X, output, protocol=4)
-    with open('../data/image_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(y, output, protocol=4)
-    with open('../data/image_data/pickle_files/vid_ids_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(vid_ids, output, protocol=4)
-
-    pass
-
-
-def transform_images_5d(partition, num_frames, num_samples):
-
-    logging.info('Begin transform images 5d for the {} partition'.format(partition))
-
-    # Open answers file
-    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
-        label_file = pickle.load(f, encoding='latin1')
-
-    # Get all IDs for videos for the training set
-    vid_ids = os.listdir('../data/image_data/{}_data'.format(partition))[0:num_samples]
-    file_ids = [i + '.mp4' for i in vid_ids]
-    y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
-
-    # Create empty array to store image data
-    X = np.empty(shape=(num_samples, num_frames, 224, 224, 3))
-    out_counter = 0
-
-    for video in vid_ids:
-
-        images = os.listdir('../data/image_data/{}_data/{}'.format(partition, video))
-        X_temp = np.zeros(shape=(num_frames, 224, 224, 3))
-        in_counter = 0
-
-        for image in images:
-
-            # Load the image
-            original = load_img('../data/image_data/{}_data/{}/{}'.format(partition, video, image),
-                                target_size=(224, 224))
-
-            # Convert to numpy array
-            numpy_image = img_to_array(original)
-
-            # Resize and store in one big array
-            image_temp = np.expand_dims(numpy_image, axis=0)
-            image_temp = vgg16.preprocess_input(image_temp)
-            X_temp[in_counter] = image_temp
-
-            # Increment counter for number of images in observation
-            in_counter += 1
-
-        X_temp = np.expand_dims(X_temp, axis=0)
-        X[out_counter] = X_temp
-
-        # Increment counter for observations in dataset
-        out_counter += 1
-
-    # Save arrays as pickled files
-    with open('../data/image_data/pickle_files/X_5d_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(X, output, protocol=4)
-    with open('../data/image_data/pickle_files/y_5d_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(y, output, protocol=4)
-    with open('../data/image_data/pickle_files/vid_ids_5d_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(file_ids, output, protocol=4)
-
-    pass
-
-
-def transform_images_5d_chunks(partition, num_frames):
+def transform_images_5d_chunks(partition, num_frames, scoring=False):
 
     logging.info('Begin transform images 5d for the {} partition'.format(partition))
 
     if not os.path.exists('../data/image_data/npy_files/{}_data/'.format(partition)):
         os.makedirs('../data/image_data/npy_files/{}_data/'.format(partition))
 
-    # Open answers file
-    with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
-        label_file = pickle.load(f, encoding='latin1')
+    if scoring:
+        # Open answers file
+        with open('../data/meta_data/annotation_{}.pkl'.format(partition), 'rb') as f:
+            label_file = pickle.load(f, encoding='latin1')
 
     # Get all IDs for videos for the training set
     vid_ids = os.listdir('../data/image_data/{}_data'.format(partition))
     file_ids = [i + '.mp4' for i in vid_ids]
-    y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
+
+    if scoring:
+        y = [label_file['interview'][i + '.mp4'] for i in vid_ids]
 
     out_counter = 0
-
 
     for video in vid_ids:
 
@@ -352,15 +255,17 @@ def transform_images_5d_chunks(partition, num_frames):
         # Increment counter for observations in dataset
         out_counter += 1
 
-    with open('../data/image_data/pickle_files/y_5d_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(y, output, protocol=4)
+    if scoring:
+        with open('../data/image_data/pickle_files/y_5d_{}.pkl'.format(partition), 'wb') as output:
+            pickle.dump(y, output, protocol=4)
+
     with open('../data/image_data/pickle_files/vid_ids_5d_{}.pkl'.format(partition), 'wb') as output:
         pickle.dump(file_ids, output, protocol=4)
 
     pass
 
 
-def transform_audio(partition, n_mfcc):
+def transform_audio(partition, n_mfcc, scoring=False):
     """
 
     compute features
@@ -377,8 +282,10 @@ def transform_audio(partition, n_mfcc):
     audio_files = os.listdir('../data/audio_data/{}_data'.format(partition))
     audio_files = [i.split('.wav')[0] for i in audio_files]
     id_array = [i + '.mp4' for i in audio_files]
-    score = [label_file['interview'][i + '.mp4'] for i in audio_files]
-    score = np.array(score)
+
+    if scoring:
+        score = [label_file['interview'][i + '.mp4'] for i in audio_files]
+        score = np.array(score)
 
     # Set column names
     mfcc_mean_cols = ['mfcc_mean_' + str(i) for i in range(n_mfcc)]
@@ -405,7 +312,7 @@ def transform_audio(partition, n_mfcc):
     cols = mfcc_mean_cols + mfcc_std_cols + other_cols
 
     # Create empty 2d array with place holders for all features
-    audio_matrix = np.empty((len(score), n_mfcc * 2 + 16))
+    audio_matrix = np.empty((len(audio_files), n_mfcc * 2 + 16))
     counter = 0
 
     for aud in audio_files:
@@ -453,7 +360,10 @@ def transform_audio(partition, n_mfcc):
 
     # Create final dataframe
     audio_df = pd.DataFrame(audio_matrix, columns=cols)
-    audio_df['interview_score'] = score
+
+    if scoring:
+        audio_df['interview_score'] = score
+
     audio_df['video_id'] = id_array
 
     audio_df.to_csv('../data/audio_data/pickle_files/{}_df.csv'.format(partition, partition), index=False)
@@ -486,15 +396,19 @@ def transform_text(partition, word_to_index):
     X = pad_sequences(observations['indices'], 80)
 
     # Create data sets for model
-    y = observations['interview_score'].values
+    if scoring:
+        y = observations['interview_score'].values
+
     vid_id = observations['video_id'].values
 
     # Save as pickled files
     with open('../data/text_data/pickle_files/X_{}.pkl'.format(partition), 'wb') as output:
         pickle.dump(X, output, protocol=4)
-    with open('../data/text_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
-        pickle.dump(y, output, protocol=4)
     with open('../data/text_data/pickle_files/vid_ids_{}.pkl'.format(partition), 'wb') as output:
         pickle.dump(vid_id, output, protocol=4)
+
+    if scoring:
+        with open('../data/text_data/pickle_files/y_{}.pkl'.format(partition), 'wb') as output:
+            pickle.dump(y, output, protocol=4)
 
     pass
