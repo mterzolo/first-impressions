@@ -14,7 +14,6 @@ import yaml
 from keras.preprocessing.sequence import pad_sequences
 from gensim.utils import simple_preprocess
 from collections import defaultdict
-import resources
 
 # Global variables
 CONFS = None
@@ -62,25 +61,16 @@ def get_conf(conf_name):
     return load_confs()[conf_name]
 
 
-def get_batch_name():
-    """
-    Get the name of the current run. This is a unique identifier for each run of this application
-    :return: The name of the current run. This is a unique identifier for each run of this application
-    :rtype: str
-    """
-    global BATCH_NAME
-
-    if BATCH_NAME is None:
-        logging.info('Batch name not yet set. Setting batch name.')
-        BATCH_NAME = str(datetime.datetime.utcnow()).replace(' ', '_').replace('/', '_').replace(':', '_')
-        logging.info('Batch name: {}'.format(BATCH_NAME))
-    return BATCH_NAME
-
-
 def extract_images(partition, num_frames):
+    """
+    Convert mp4 files into a series of jpeg images
+    :param partition: Which data set
+    :param num_frames: How many frames per video to extract
+    """
 
     logging.info('Begin image extraction on {} partition'.format(partition))
 
+    # Define how many directories of videos to work through
     file_chunks = os.listdir('../data/video_data')
     file_chunks = [i for i in file_chunks if partition in i]
 
@@ -138,9 +128,14 @@ def extract_images(partition, num_frames):
 
 
 def extract_audio(partition):
+    """
+    Extract mp3 files from each mp4 file
+    :param partition: Which data set to use
+    """
 
     logging.info('Begin Audio Extraction on {} partition'.format(partition))
 
+    # Define how many directories of videos to work through
     file_chunks = os.listdir('../data/video_data')
     file_chunks = [i for i in file_chunks if partition in i]
 
@@ -155,6 +150,7 @@ def extract_audio(partition):
         for file_name in files:
             file_name = file_name.split('.mp4')[0]
 
+            # Use ffmpeg to strip audio from the video file
             subprocess.call(['ffmpeg',
                              '-y',
                              '-i',
@@ -165,9 +161,9 @@ def extract_audio(partition):
 
 def extract_text(partition, training=False):
     """
-
     Takes transcripts and saves them as dataframes
-    :param partition: Training set, test set, or validation set
+    :param partition: Which data set to use
+    :param training: Is this run being used to train models or evaluate new videos
     :return:
     """
 
@@ -185,7 +181,10 @@ def extract_text(partition, training=False):
     text_df = pd.DataFrame({'video_id': list(transcript.keys()),
                             'transcript': list(transcript.values())})
 
+    # When a video doesnt have a transcription, fill value with the unknown token
     text_df['transcript'] = text_df['transcript'].fillna('UNK')
+
+    # Remove punctuation
     text_df['token'] = text_df['transcript'].str.replace(r'\[.*\]', '')
 
     if training:
@@ -196,13 +195,20 @@ def extract_text(partition, training=False):
     if not os.path.exists('../data/text_data/{}_data/'.format(partition)):
         os.makedirs('../data/text_data/{}_data/'.format(partition))
 
+    # Save to disk
     with open('../data/text_data/{}_data/{}_text_df.pkl'.format(partition, partition), 'wb') as output:
         pickle.dump(text_df, output, protocol=4)
 
     pass
 
 
-def transform_images_5d_chunks(partition, num_frames, training=True):
+def transform_images(partition, num_frames, training=True):
+    """
+    Convert jpegs to numpy arrays and preprocess for the vgg16 model
+    :param partition: Which data set to use
+    :param num_frames: How many frames are contained in each numpy array
+    :param training: Is this run for training models or evaluating new videos
+    """
 
     logging.info('Begin transform images 5d for the {} partition'.format(partition))
 
@@ -259,6 +265,7 @@ def transform_images_5d_chunks(partition, num_frames, training=True):
         with open('../data/image_data/pickle_files/y_5d_{}.pkl'.format(partition), 'wb') as output:
             pickle.dump(y, output, protocol=4)
 
+    # Save to disk
     with open('../data/image_data/pickle_files/vid_ids_5d_{}.pkl'.format(partition), 'wb') as output:
         pickle.dump(file_ids, output, protocol=4)
 
@@ -267,9 +274,10 @@ def transform_images_5d_chunks(partition, num_frames, training=True):
 
 def transform_audio(partition, n_mfcc, training=True):
     """
-
-    compute features
-    :return:
+    Use librosa to extract features and save dataframe with all features for each video
+    :param partition: Which data set to use
+    :param n_mfcc: Number of mfc coefficients to extract
+    :param training: Is this run for training models or evaluating new videos
     """
 
     logging.info('Begin audio transformations for {} partition'.format(partition))
@@ -373,6 +381,12 @@ def transform_audio(partition, n_mfcc, training=True):
 
 
 def transform_text(partition, word_to_index, training=True):
+    """
+    Tokenize, and convert to indices based on the google news 20 word embeddings
+    :param partition: Which data set to use
+    :param word_to_index: dictionary that translates indices to vectors in the google news 20 word embeddings
+    :param training: Is this run for training models or evaluating new videos
+    """
 
     logging.info('Begin text transformation on {}'.format(partition))
 
@@ -389,8 +403,8 @@ def transform_text(partition, word_to_index, training=True):
     observations['tokens'] = observations['transcript'].apply(simple_preprocess)
 
     # Convert tokens to indices
-    observations['indices'] = observations['tokens'].apply(lambda token_list: list(map(lambda token: word_to_index[token],
-                                                                                       token_list)))
+    observations['indices'] = observations['tokens'].apply(lambda token_list:
+                                                           list(map(lambda token: word_to_index[token], token_list)))
     observations['indices'] = observations['indices'].apply(lambda x: np.array(x))
 
     # Pad indices list with zeros, so that every article's list of indices is the same length

@@ -14,17 +14,16 @@ from my_classes import DataGenerator
 
 def main():
     """
-
-    main entry point for code
+    Main entry point for code
     :return:
     """
 
-    logging.getLogger().setLevel(level=logging.DEBUG)
+    logging.getLogger().setLevel(level=logging.INFO)
 
-    #extract()
-    #transform()
-    #model()
-    #ensemble()
+    extract()
+    transform()
+    model()
+    ensemble()
     score_new_vid()
 
     pass
@@ -32,14 +31,16 @@ def main():
 
 def extract():
     """
-
-    Downloads raw data needed and extracts image, audio, and text from video files
+    Downloads raw data needed and extracts data for all 3 models.
+    Image - Convert mp4 files into a series of jpeg images
+    Audio - Extract mp3 files from each mp4 file
+    Text - Extract text from annotation files
     :return:
     """
 
     # Download resources
-    #resources.download_first_impressions()
-    #resources.download_embedding()
+    resources.download_first_impressions()
+    resources.download_embedding()
 
     # Extract images, audio files, and text transcripts for each partition
     for partition in ['training', 'test', 'validation']:
@@ -57,29 +58,40 @@ def extract():
 
 
 def transform():
+    """
+    Transforms all features for the 3 models.
+    Image - Convert jpegs to numpy arrays and preprocess for the vgg16 model
+    Audio - Use librosa to extract features and save dataframe with all features for each video
+    Text - Tokenize, and convert to indices based on the google news 20 word embeddings
+    :return:
+    """
 
     embedding_matrix, word_to_index = resources.create_embedding_matrix()
 
     for partition in ['training', 'test', 'validation']:
 
         # Transform raw jpegs into numpy arrays
-        lib.transform_images_5d_chunks(partition=partition, num_frames=10)
-
-        # Transform raw jpegs into numpy arrays
-        #lib.transform_images(partition=partition, frame_num=4)
+        lib.transform_images(partition=partition, num_frames=10)
 
         # Transform raw audio to feature matrix
-        #lib.transform_audio(partition=partition, n_mfcc=13)
+        lib.transform_audio(partition=partition, n_mfcc=13)
 
         # Transform text to tokens
-        #lib.transform_text(partition=partition, word_to_index=word_to_index)
+        lib.transform_text(partition=partition, word_to_index=word_to_index)
 
     pass
 
 
-def model(image=False, audio=False, text=False, image_5d_chunks=True):
+def model(image=False, audio=False, text=False):
+    """
+    Train all 3 models
+    :param image: Whether or not to train the image model on this run
+    :param audio: Whether or not to train the audio model on this run
+    :param text: Whether or not to train the text model on this run
+    :return:
+    """
 
-    if image_5d_chunks:
+    if image:
 
         # Parameters
         params = {'dim': (10, 224, 224),
@@ -101,6 +113,7 @@ def model(image=False, audio=False, text=False, image_5d_chunks=True):
                                              list_IDs=range(2000),
                                              labels=test_labels, **params)
 
+        # Create model
         model = models.image_lrcn()
 
         # Train model on data set
@@ -112,39 +125,20 @@ def model(image=False, audio=False, text=False, image_5d_chunks=True):
 
         model.save_weights('../output/image_model.h5')
 
-    if image:
-
-        # Load data
-        with open('../data/image_data/pickle_files/X_training.pkl', 'rb') as file:
-            X_train = pickle.load(file)
-        with open('../data/image_data/pickle_files/y_training.pkl', 'rb') as file:
-            y_train = pickle.load(file)
-        with open('../data/image_data/pickle_files/X_test.pkl', 'rb') as file:
-            X_test = pickle.load(file)
-        with open('../data/image_data/pickle_files/y_test.pkl', 'rb') as file:
-            y_test = pickle.load(file)
-
-        # Create model and fit
-        image_model = models.image_cnn_model()
-        filename = '../output/image_model.h5'
-        checkpoint = ModelCheckpoint(filename, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
-        image_model.fit(X_train, y_train,
-                        validation_data=(X_test, y_test),
-                        batch_size=64, epochs=100,
-                        callbacks=[checkpoint],
-                        shuffle=True)
-
     if audio:
 
+        # Read in aduio data
         training_set = pd.read_csv('../data/audio_data/pickle_files/training_df.csv')
         test_set = pd.read_csv('../data/audio_data/pickle_files/test_df.csv')
 
+        # Concat data sets in order to use all data for CV
         all_data = pd.concat((training_set, test_set), axis=0)
         X_all = all_data.drop(['interview_score', 'video_id'], axis=1)
         y_all = all_data['interview_score']
 
         logging.info('Start training audio model')
 
+        # Create model and fit to data
         audio_model = models.audio_rand_forest()
         audio_model.fit(X_all, y_all)
 
@@ -152,14 +146,16 @@ def model(image=False, audio=False, text=False, image_5d_chunks=True):
         logging.info('Train score with best estimator: {}'.format(max(audio_model.cv_results_['mean_train_score'])))
         logging.info('Test score with best estimator: {}'.format(max(audio_model.cv_results_['mean_test_score'])))
 
+        # Save to disk
         with open('../output/audio_model.pkl', 'wb') as fid:
             pickle.dump(audio_model, fid)
 
     if text:
 
+        # Load in word embeddings
         embedding_matrix, word_to_index = resources.create_embedding_matrix()
 
-        # Load data
+        # Load text data
         with open('../data/text_data/pickle_files/X_training.pkl', 'rb') as file:
             X_train = pickle.load(file)
         with open('../data/text_data/pickle_files/y_training.pkl', 'rb') as file:
@@ -325,22 +321,13 @@ def ensemble():
     ols_model.fit(X_train, y_train)
 
     # Score model
-    train_score = mean_squared_error(y_train, ols_model.predict(X_train))
-    test_score = mean_squared_error(y_test, ols_model.predict(X_test))
-    val_score = mean_squared_error(y_val, ols_model.predict(X_val))
+    train_score = np.sqrt(mean_squared_error(y_train, ols_model.predict(X_train)))
+    test_score = np.sqrt(mean_squared_error(y_test, ols_model.predict(X_test)))
+    val_score = np.sqrt(mean_squared_error(y_val, ols_model.predict(X_val)))
 
     logging.info('OLS Score on training set: {}'.format(train_score))
     logging.info('OLS Score on test set: {}'.format(test_score))
     logging.info('OLS Score on val set: {}'.format(val_score))
-
-    # Simple Average
-    simp_train_score = mean_squared_error(y_train, X_train.mean(axis=1))
-    simp_test_score = mean_squared_error(y_test, X_test.mean(axis=1))
-    simp_val_score = mean_squared_error(y_val, X_val.mean(axis=1))
-
-    logging.info('Simple Average Score on training set: {}'.format(simp_train_score))
-    logging.info('Simple Average Score on test set: {}'.format(simp_test_score))
-    logging.info('Simple Average Score on val set: {}'.format(simp_val_score))
 
     # Save model
     with open('../output/ensemble_model.pkl', 'wb') as fid:
@@ -364,7 +351,7 @@ def score_new_vid():
 
     # Transform features
     embedding_matrix, word_to_index = resources.create_embedding_matrix()
-    lib.transform_images_5d_chunks(partition='score', num_frames=10, training=False)
+    lib.transform_images(partition='score', num_frames=10, training=False)
     lib.transform_audio(partition='score', n_mfcc=13, training=False)
     lib.transform_text(partition='score', word_to_index=word_to_index, training=False)
 
